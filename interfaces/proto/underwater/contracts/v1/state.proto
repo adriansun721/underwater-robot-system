@@ -1,0 +1,185 @@
+syntax = "proto3";
+
+package underwater.contracts.v1;
+
+import "underwater/contracts/v1/common.proto";
+
+enum StateDomain {
+  option allow_alias = true;
+  STATE_DOMAIN_UNSPECIFIED = 0;
+  // Retained as the source-compatible v1 name for the main laying domain.
+  STATE_DOMAIN_EXECUTION_AUTHORITY = 1 [deprecated = true];
+  STATE_DOMAIN_MAIN_EXECUTION_AUTHORITY = 1;
+  STATE_DOMAIN_MAIN_ROBOT = 2;
+  STATE_DOMAIN_CABLE_LAYING = 3;
+  STATE_DOMAIN_COMMUNICATION = 4;
+  STATE_DOMAIN_EMERGENCY_STOP = 5;
+  STATE_DOMAIN_SCOUT_MISSION = 6;
+  STATE_DOMAIN_SCOUT_EXECUTION_AUTHORITY = 7;
+}
+
+enum ExecutionAuthorityState {
+  EXECUTION_AUTHORITY_STATE_UNSPECIFIED = 0;
+  EXECUTION_AUTHORITY_NO_AUTHORIZATION = 1;
+  EXECUTION_AUTHORITY_AUTHORIZED = 2;
+  EXECUTION_AUTHORITY_REVOKING = 3;
+  EXECUTION_AUTHORITY_REVOKED = 4;
+}
+
+enum MainRobotMode {
+  MAIN_ROBOT_MODE_UNSPECIFIED = 0;
+  MAIN_ROBOT_INIT = 1;
+  MAIN_ROBOT_SELF_CHECK = 2;
+  MAIN_ROBOT_STANDBY = 3;
+  MAIN_ROBOT_ARMED = 4;
+  MAIN_ROBOT_NAVIGATING = 5;
+  MAIN_ROBOT_HOLD = 6;
+  MAIN_ROBOT_FAULT = 7;
+}
+
+enum CableLayingState {
+  CABLE_LAYING_STATE_UNSPECIFIED = 0;
+  CABLE_PROFILE_LOAD = 1;
+  CABLE_THREADING_CHECK = 2;
+  CABLE_PRE_TENSION = 3;
+  CABLE_READY = 4;
+  CABLE_LAYING = 5;
+  CABLE_CORNER_SLOW = 6;
+  CABLE_PAUSE_HOLD = 7;
+  CABLE_RECOVERY = 8;
+  CABLE_FINISH = 9;
+  CABLE_FAULT = 10;
+}
+
+enum CommunicationState {
+  COMMUNICATION_STATE_UNSPECIFIED = 0;
+  COMMUNICATION_LINK_DOWN = 1;
+  COMMUNICATION_CONNECTING = 2;
+  COMMUNICATION_SYNCHRONIZING = 3;
+  COMMUNICATION_NORMAL = 4;
+  COMMUNICATION_DEGRADED = 5;
+  COMMUNICATION_LOST = 6;
+  COMMUNICATION_RESYNCHRONIZING = 7;
+}
+
+enum ChannelId {
+  CHANNEL_ID_UNSPECIFIED = 0;
+  CHANNEL_PLANNER_EXECUTOR_IPC = 1;
+  CHANNEL_NUC_STM32_CAN = 2;
+  CHANNEL_MAIN_SCOUT_COOP = 3;
+  CHANNEL_SCOUT_NUC_FCU = 4;
+}
+
+enum EmergencyStopState {
+  EMERGENCY_STOP_STATE_UNSPECIFIED = 0;
+  EMERGENCY_STOP_CLEARED = 1;
+  EMERGENCY_STOP_TRIGGERED = 2;
+  EMERGENCY_STOP_LATCHED = 3;
+  EMERGENCY_STOP_AWAITING_LOCAL_RESET = 4;
+}
+
+enum ScoutMissionState {
+  SCOUT_MISSION_STATE_UNSPECIFIED = 0;
+  SCOUT_IDLE = 1;
+  SCOUT_PLANNING = 2;
+  SCOUT_READY = 3;
+  SCOUT_EXECUTING = 4;
+  SCOUT_OBSERVING = 5;
+  SCOUT_WAITING_MAP = 6;
+  SCOUT_REPLANNING = 7;
+  SCOUT_DEGRADED = 8;
+  SCOUT_RISK_ACTION = 9;
+  SCOUT_COMPLETED = 10;
+  SCOUT_FAILED = 11;
+}
+
+message StateTransition {
+  MessageHeader header = 1;
+  StateDomain domain = 2;
+  uint32 previous_state = 3;
+  uint32 next_state = 4;
+  uint32 trigger_code = 5 [deprecated = true];
+  uint64 state_version = 6;
+  optional int64 entered_at_monotonic_ns = 7;
+  optional ChannelId channel_id = 8;
+  // Exact stable registry reference. Unknown trigger codes fail closed.
+  CodeRef trigger = 9;
+  ContentIdentity transition_content_identity = 10;
+}
+
+message CommunicationChannelStatus {
+  MessageHeader header = 1;
+  ChannelId channel_id = 2;
+  CommunicationState state = 3;
+  ProfileRef timing_profile = 4;
+  ProfileRef loss_policy = 5;
+  optional int64 state_entered_at_monotonic_ns = 6;
+}
+
+message SystemStateSnapshot {
+  MessageHeader header = 1;
+  uint64 snapshot_version = 2;
+  ExecutionAuthorityState authority_state = 3;
+  MainRobotMode main_robot_mode = 4;
+  CableLayingState cable_laying_state = 5;
+  EmergencyStopState emergency_stop_state = 6;
+  ScoutMissionState scout_mission_state = 7;
+  repeated CommunicationChannelStatus communication_channels = 8;
+  optional bool derived_can_execute = 9;
+  // Independent Scout-motion authority state; field 3 remains main-laying only.
+  ExecutionAuthorityState scout_authority_state = 10;
+  optional bool derived_scout_can_execute = 11;
+}
+
+enum NavigationSolutionValidity {
+  NAVIGATION_SOLUTION_VALIDITY_UNSPECIFIED = 0;
+  NAVIGATION_SOLUTION_VALID = 1;
+  NAVIGATION_SOLUTION_DEGRADED = 2;
+  NAVIGATION_SOLUTION_INVALID = 3;
+}
+
+message Pose3dEnuFlu {
+  optional double x_m = 1;
+  optional double y_m = 2;
+  optional double z_m = 3;
+  // Unit quaternion rotating base_link/FLU vectors into mission_enu.
+  optional double q_x = 4;
+  optional double q_y = 5;
+  optional double q_z = 6;
+  optional double q_w = 7;
+  string world_frame_id = 8;
+  string body_frame_id = 9;
+}
+
+message BodyTwist3dFlu {
+  optional double linear_x_mps = 1;
+  optional double linear_y_mps = 2;
+  optional double linear_z_mps = 3;
+  optional double angular_x_radps = 4;
+  optional double angular_y_radps = 5;
+  optional double angular_z_radps = 6;
+  string frame_id = 7;
+}
+
+message Covariance3d {
+  // Exactly 9 finite values in row-major axis order.
+  repeated double row_major = 1;
+  string frame_id = 2;
+}
+
+// Authoritative localization snapshot consumed read-only by Scout planning.
+message ScoutNavigationState {
+  MessageHeader header = 1;
+  uint64 navigation_version = 2;
+  // Source observation tick in header.source_clock_domain_id.
+  optional int64 observed_at_monotonic_ns = 3;
+  Pose3dEnuFlu pose = 4;
+  BodyTwist3dFlu body_twist = 5;
+  // ENU x/y/z covariance in square metres.
+  Covariance3d position_covariance_m2 = 6;
+  // FLU roll/pitch/yaw small-angle covariance in square radians.
+  Covariance3d attitude_covariance_rad2 = 7;
+  NavigationSolutionValidity validity = 8;
+  ProfileRef timing_profile = 9;
+  ContentIdentity navigation_content_identity = 10;
+}

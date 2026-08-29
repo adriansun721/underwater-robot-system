@@ -1,0 +1,94 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "verify",
+      "displayName": "Verify the ROS-agnostic planning core",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/verify",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "verify",
+      "configurePreset": "verify",
+      "targets": [
+        "underwater_planner_fixture_tests",
+        "underwater_planner_contract_tests",
+        "underwater_planner_parameter_tests",
+        "underwater_planner_snapshot_tests",
+        "underwater_planner_synchronized_input_tests",
+        "underwater_planner_terrain_analyzer_tests",
+        "underwater_planner_step_geometry_tests",
+        "underwater_planner_traversability_tests",
+        "underwater_planner_directional_slope_tests",
+        "underwater_planner_step_traversability_tests",
+        "underwater_planner_level1_terrain_traversability_tests",
+        "underwater_planner_cable_state_tracker_tests",
+        "underwater_planner_cable_model_tests",
+        "underwater_planner_cable_laying_evaluator_tests",
+        "underwater_planner_cable_corridor_evaluator_tests",
+        "underwater_planner_cable_uncertainty_envelope_builder_tests",
+        "underwater_planner_cable_uncertainty_envelope_manager_tests",
+        "underwater_planner_reference_progress_tracker_tests",
+        "underwater_planner_merge_goal_generator_tests",
+        "underwater_planner_hybrid_astar_tests",
+        "underwater_planner_path_smoother_tests",
+        "underwater_planner_path_candidate_verifier_tests",
+        "underwater_planner_trajectory_parameterizer_tests",
+        "underwater_planner_timed_cable_candidate_verifier_tests",
+        "underwater_planner_level1_search_cable_tests",
+        "underwater_planner_planning_result_tests",
+        "underwater_planner_plan_validity_evaluator_tests",
+        "underwater_planner_execution_lease_monitor_tests",
+        "underwater_planner_stability_manager_tests",
+        "underwater_planner_scout_coordinator_tests",
+        "underwater_planner_planning_state_machine_tests",
+        "underwater_planner_main_planning_loop_tests",
+        "underwater_planner_level1_smoothing_timing_stability_tests",
+        "underwater_planner_message_consistency_tests",
+        "underwater_planner_algorithm_diagnostics_tests",
+        "underwater_planner_level1_closed_loop_tests",
+        "static-check"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "verify",
+      "configurePreset": "verify",
+      "output": {
+        "outputOnFailure": true,
+        "outputJUnitFile": "ctest.xml"
+      }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "verify",
+      "displayName": "Configure, build, analyze, and test",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "verify"
+        },
+        {
+          "type": "build",
+          "name": "verify"
+        },
+        {
+          "type": "test",
+          "name": "verify"
+        }
+      ]
+    }
+  ]
+}

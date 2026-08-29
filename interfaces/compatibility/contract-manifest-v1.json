@@ -1,0 +1,49 @@
+{
+  "manifest_id": "underwater-contract-manifest/v1",
+  "schema_major": 1,
+  "schema_minor": 0,
+  "protobuf_descriptor_sha256": "44ded468a534e8c75722d98125d3eb49c2aebf3a7ab0f2ee8cecc251907cf7f1",
+  "code_registry": {
+    "id": "underwater-system-codes",
+    "version": 1,
+    "sha256": "0974029fe79c9c55220e485fec1e8bdf2e800613207be8a3101a5b8008724199"
+  },
+  "can_protocol": {
+    "id": "main-robot-can/v1",
+    "version": 1,
+    "dbc_sha256": "fec1dd6a6fce58fa76011bfe715b067442d1fbf0a6d61292f53da2df7b34e37f",
+    "supplement_sha256": "299b8982435f6bfac725b0021c41115fb6b0ba22f23cdce76c6a2f1f9c6a8ea3",
+    "combined_sha256": "1679a326c3d714b22d5a5989915b94a3bd5952f57b905ce93fe9bdc0346fda58"
+  },
+  "integration_profile": {
+    "id": "integration/v1",
+    "version": 1,
+    "sha256": "fbb887dfd6c176f9455648201711f29ed3c80bffcac61b5f3632da4f6d9670bf",
+    "production": false
+  },
+  "scout_state_transition_registry": {
+    "id": "scout-state-transitions/v1",
+    "version": 1,
+    "sha256": "24cb6199d5d7bb89e4548ad2e417ffea6029e10b6b7e7f6eb050d9142bd3601e"
+  },
+  "scout_configuration": {
+    "id": "scout/integration/v1",
+    "version": 1,
+    "sha256": "fbb887dfd6c176f9455648201711f29ed3c80bffcac61b5f3632da4f6d9670bf",
+    "production": false
+  },
+  "supported_features": [
+    "scout_mission_lifecycle_v1",
+    "scout_hybrid_map_snapshot_v1",
+    "scout_navigation_state_v1",
+    "scout_sensor_and_current_v1",
+    "scout_capability_and_energy_v1",
+    "scout_main_robot_coordination_v1",
+    "scout_4d_planning_result_v1",
+    "independent_execution_authority_domains_v1",
+    "scout_authorization_bundle_v1",
+    "scout_execution_feedback_revocation_v1",
+    "scout_state_codes_profiles_v1"
+  ],
+  "approved_mixed_versions": []
+}

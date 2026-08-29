@@ -1,0 +1,89 @@
+{
+  "registry_id": "scout-state-transitions/v1",
+  "version": 1,
+  "safety_semantics_major": 1,
+  "domains": {
+    "SCOUT_MISSION": {
+      "state_domain_code": 6,
+      "states": {"IDLE": 1, "PLANNING": 2, "READY": 3, "EXECUTING": 4, "OBSERVING": 5, "WAITING_MAP": 6, "REPLANNING": 7, "DEGRADED": 8, "RISK_ACTION": 9, "COMPLETED": 10, "FAILED": 11},
+      "transitions": [
+        {"from": "IDLE", "to": "PLANNING", "trigger": "MISSION_ACCEPTED", "trigger_code": 196609, "required_evidence": "exact accepted ScoutMissionDecision", "audit_event": "STATE_TRANSITION"},
+        {"from": "PLANNING", "to": "READY", "trigger": "PLAN_VALIDATED", "trigger_code": 196610, "required_evidence": "exact safe ScoutPlanningResult", "audit_event": "STATE_TRANSITION"},
+        {"from": "READY", "to": "EXECUTING", "trigger": "SCOUT_BUNDLE_INSTALLED", "trigger_code": 196611, "required_evidence": "installed live ScoutAuthorizedExecutionBundle", "audit_event": "STATE_TRANSITION"},
+        {"from": "EXECUTING", "to": "OBSERVING", "trigger": "OBSERVATION_REQUIRED", "trigger_code": 196612, "required_evidence": "authorized survey action reached observation interval", "audit_event": "STATE_TRANSITION"},
+        {"from": "OBSERVING", "to": "WAITING_MAP", "trigger": "MAP_UPDATE_REQUIRED", "trigger_code": 196613, "required_evidence": "completed observation identifiers awaiting immutable map", "audit_event": "STATE_TRANSITION"},
+        {"from": "WAITING_MAP", "to": "REPLANNING", "trigger": "MAP_UPDATE_AVAILABLE", "trigger_code": 196614, "required_evidence": "strictly newer complete map snapshot", "audit_event": "STATE_TRANSITION"},
+        {"from": "REPLANNING", "to": "EXECUTING", "trigger": "SCOUT_BUNDLE_INSTALLED", "trigger_code": 196611, "required_evidence": "strictly newer installed Scout bundle", "audit_event": "STATE_TRANSITION"},
+        {"from": "OBSERVING", "to": "COMPLETED", "trigger": "COMPLETION_EVIDENCE_ACCEPTED", "trigger_code": 196615, "required_evidence": "accepted actual observations and strictly newer map", "audit_event": "STATE_TRANSITION"},
+        {"from": "WAITING_MAP", "to": "COMPLETED", "trigger": "COMPLETION_EVIDENCE_ACCEPTED", "trigger_code": 196615, "required_evidence": "accepted SurveyCompletionEvidence", "audit_event": "STATE_TRANSITION"},
+        {"from": "EXECUTING", "to": "DEGRADED", "trigger": "SAFETY_DEGRADED", "trigger_code": 196616, "required_evidence": "registered active Scout fault or dependency degradation", "audit_event": "STATE_TRANSITION"},
+        {"from": "OBSERVING", "to": "DEGRADED", "trigger": "SAFETY_DEGRADED", "trigger_code": 196616, "required_evidence": "registered active Scout fault or dependency degradation", "audit_event": "STATE_TRANSITION"},
+        {"from": "DEGRADED", "to": "RISK_ACTION", "trigger": "RISK_ACTION_SELECTED", "trigger_code": 196617, "required_evidence": "independent supervisor selection after revocation", "audit_event": "STATE_TRANSITION"},
+        {"from": "RISK_ACTION", "to": "REPLANNING", "trigger": "RISK_ACTION_COMPLETED", "trigger_code": 196618, "required_evidence": "risk action completed and fresh planning prerequisites", "audit_event": "STATE_TRANSITION"},
+        {"from": "RISK_ACTION", "to": "FAILED", "trigger": "RISK_ACTION_FAILED", "trigger_code": 196619, "required_evidence": "latched SCOUT_RISK_ACTION_FAILED fault", "audit_event": "STATE_TRANSITION"},
+        {"from": "PLANNING", "to": "FAILED", "trigger": "MISSION_CANCELLED", "trigger_code": 196620, "required_evidence": "applied exact mission cancellation", "audit_event": "STATE_TRANSITION"},
+        {"from": "READY", "to": "FAILED", "trigger": "MISSION_CANCELLED", "trigger_code": 196620, "required_evidence": "applied exact mission cancellation", "audit_event": "STATE_TRANSITION"}
+      ]
+    },
+    "SCOUT_EXECUTION_AUTHORITY": {
+      "state_domain_code": 7,
+      "states": {"NO_AUTHORIZATION": 1, "AUTHORIZED": 2, "REVOKING": 3, "REVOKED": 4},
+      "transitions": [
+        {"from": "NO_AUTHORIZATION", "to": "AUTHORIZED", "trigger": "SCOUT_BUNDLE_INSTALLED", "trigger_code": 196611, "required_evidence": "exact safe bundle compatible profiles and live lease", "audit_event": "STATE_TRANSITION"},
+        {"from": "AUTHORIZED", "to": "REVOKING", "trigger": "REVOCATION_REQUESTED", "trigger_code": 196621, "required_evidence": "exact ScoutExecutionRevocation", "audit_event": "STATE_TRANSITION"},
+        {"from": "REVOKING", "to": "REVOKED", "trigger": "REVOCATION_DISPATCHED", "trigger_code": 196622, "required_evidence": "persisted revocation watermark and local stop dispatch", "audit_event": "STATE_TRANSITION"},
+        {"from": "REVOKED", "to": "AUTHORIZED", "trigger": "STRICTLY_NEWER_SCOUT_BUNDLE", "trigger_code": 196623, "required_evidence": "complete revalidation and strictly newer bundle lease", "audit_event": "STATE_TRANSITION"},
+        {"from": "NO_AUTHORIZATION", "to": "NO_AUTHORIZATION", "trigger": "NEW_SCOUT_AUTHORITY_SESSION", "trigger_code": 196624, "required_evidence": "new local authority session", "audit_event": "STATE_TRANSITION"},
+        {"from": "AUTHORIZED", "to": "NO_AUTHORIZATION", "trigger": "NEW_SCOUT_AUTHORITY_SESSION", "trigger_code": 196624, "required_evidence": "new local authority session invalidates old authorization", "audit_event": "STATE_TRANSITION"},
+        {"from": "REVOKING", "to": "NO_AUTHORIZATION", "trigger": "NEW_SCOUT_AUTHORITY_SESSION", "trigger_code": 196624, "required_evidence": "new local authority session invalidates old watermarks", "audit_event": "STATE_TRANSITION"},
+        {"from": "REVOKED", "to": "NO_AUTHORIZATION", "trigger": "NEW_SCOUT_AUTHORITY_SESSION", "trigger_code": 196624, "required_evidence": "new local authority session before grant", "audit_event": "STATE_TRANSITION"}
+      ]
+    },
+    "MAIN_SCOUT_COMMUNICATION": {
+      "state_domain_code": 4,
+      "channel_id_code": 3,
+      "states": {"LINK_DOWN": 1, "CONNECTING": 2, "SYNCHRONIZING": 3, "NORMAL": 4, "DEGRADED": 5, "LOST": 6, "RESYNCHRONIZING": 7},
+      "transitions": [
+        {"from": "LINK_DOWN", "to": "CONNECTING", "trigger": "LINK_CONNECT_REQUESTED", "trigger_code": 196625, "required_evidence": "new transport session", "audit_event": "STATE_TRANSITION"},
+        {"from": "CONNECTING", "to": "SYNCHRONIZING", "trigger": "LINK_SYNCHRONIZED", "trigger_code": 196626, "required_evidence": "manifest negotiation started", "audit_event": "STATE_TRANSITION"},
+        {"from": "SYNCHRONIZING", "to": "NORMAL", "trigger": "LINK_RECOVERED", "trigger_code": 196630, "required_evidence": "compatible manifest profile and post-boundary watermarks", "audit_event": "STATE_TRANSITION"},
+        {"from": "NORMAL", "to": "DEGRADED", "trigger": "LINK_DEGRADED", "trigger_code": 196627, "required_evidence": "channel timing profile degraded threshold", "audit_event": "STATE_TRANSITION"},
+        {"from": "DEGRADED", "to": "LOST", "trigger": "LINK_LOST", "trigger_code": 196628, "required_evidence": "channel timing profile lost threshold", "audit_event": "STATE_TRANSITION"},
+        {"from": "DEGRADED", "to": "RESYNCHRONIZING", "trigger": "LINK_RESYNC_STARTED", "trigger_code": 196629, "required_evidence": "new session and resynchronization boundary", "audit_event": "STATE_TRANSITION"},
+        {"from": "LOST", "to": "RESYNCHRONIZING", "trigger": "LINK_RESYNC_STARTED", "trigger_code": 196629, "required_evidence": "new session and resynchronization boundary", "audit_event": "STATE_TRANSITION"},
+        {"from": "RESYNCHRONIZING", "to": "NORMAL", "trigger": "LINK_RECOVERED", "trigger_code": 196630, "required_evidence": "fresh evidence compatible profiles and post-boundary watermarks", "audit_event": "STATE_TRANSITION"},
+        {"from": "NORMAL", "to": "LINK_DOWN", "trigger": "LINK_DISCONNECTED", "trigger_code": 196631, "required_evidence": "transport disconnect fact", "audit_event": "STATE_TRANSITION"}
+      ]
+    },
+    "SCOUT_FCU_COMMUNICATION": {
+      "state_domain_code": 4,
+      "channel_id_code": 4,
+      "states": {"LINK_DOWN": 1, "CONNECTING": 2, "SYNCHRONIZING": 3, "NORMAL": 4, "DEGRADED": 5, "LOST": 6, "RESYNCHRONIZING": 7},
+      "transitions": [
+        {"from": "LINK_DOWN", "to": "CONNECTING", "trigger": "LINK_CONNECT_REQUESTED", "trigger_code": 196625, "required_evidence": "new FCU transport session", "audit_event": "STATE_TRANSITION"},
+        {"from": "CONNECTING", "to": "SYNCHRONIZING", "trigger": "LINK_SYNCHRONIZED", "trigger_code": 196626, "required_evidence": "FCU mode and capability synchronization started", "audit_event": "STATE_TRANSITION"},
+        {"from": "SYNCHRONIZING", "to": "NORMAL", "trigger": "LINK_RECOVERED", "trigger_code": 196630, "required_evidence": "new FCU session compatible mode and fresh health evidence", "audit_event": "STATE_TRANSITION"},
+        {"from": "NORMAL", "to": "DEGRADED", "trigger": "LINK_DEGRADED", "trigger_code": 196627, "required_evidence": "FCU heartbeat degraded threshold", "audit_event": "STATE_TRANSITION"},
+        {"from": "DEGRADED", "to": "LOST", "trigger": "LINK_LOST", "trigger_code": 196628, "required_evidence": "FCU heartbeat lost threshold", "audit_event": "STATE_TRANSITION"},
+        {"from": "DEGRADED", "to": "RESYNCHRONIZING", "trigger": "LINK_RESYNC_STARTED", "trigger_code": 196629, "required_evidence": "new FCU session synchronization", "audit_event": "STATE_TRANSITION"},
+        {"from": "LOST", "to": "RESYNCHRONIZING", "trigger": "LINK_RESYNC_STARTED", "trigger_code": 196629, "required_evidence": "new FCU session synchronization", "audit_event": "STATE_TRANSITION"},
+        {"from": "RESYNCHRONIZING", "to": "NORMAL", "trigger": "LINK_RECOVERED", "trigger_code": 196630, "required_evidence": "fresh health mode and command watermark evidence", "audit_event": "STATE_TRANSITION"},
+        {"from": "NORMAL", "to": "LINK_DOWN", "trigger": "LINK_DISCONNECTED", "trigger_code": 196631, "required_evidence": "FCU transport disconnect fact", "audit_event": "STATE_TRANSITION"}
+      ]
+    }
+  },
+  "risk_action_rules": {
+    "BRAKE": {"requires_revocation": true, "permits_new_exploration": false, "minimum_stop_level": "PROTECTIVE", "terminal_transition": "REPLANNING"},
+    "HOLD": {"requires_revocation": true, "permits_new_exploration": false, "minimum_stop_level": "CONTROLLED", "terminal_transition": "REPLANNING"},
+    "RETREAT": {"requires_revocation": true, "permits_new_exploration": false, "minimum_stop_level": "CONTROLLED", "terminal_transition": "REPLANNING"},
+    "RETURN": {"requires_revocation": true, "permits_new_exploration": false, "minimum_stop_level": "CONTROLLED", "terminal_transition": "REPLANNING"},
+    "ASCEND": {"requires_revocation": true, "permits_new_exploration": false, "minimum_stop_level": "PROTECTIVE", "terminal_transition": "FAILED"}
+  },
+  "illegal_transition_rule": {"reject": true, "outcome": "STATE_TRANSITION_REJECTED", "diagnostic": "SCOUT_STATE_TRANSITION_REJECTED", "audit_event": "ILLEGAL_TRANSITION_REJECTED"},
+  "rejection_rules": {
+    "UNKNOWN_SAFETY_ENUM": {"reject": true, "outcome": "INPUT_INVALID", "diagnostic": "SCOUT_UNKNOWN_SAFETY_ENUM", "audit_event": "COMPATIBILITY_REJECTED"},
+    "ILLEGAL_STATE_TRANSITION": {"reject": true, "outcome": "STATE_TRANSITION_REJECTED", "diagnostic": "SCOUT_STATE_TRANSITION_REJECTED", "audit_event": "ILLEGAL_TRANSITION_REJECTED"},
+    "MISSING_PRODUCTION_PARAMETER": {"reject": true, "outcome": "PROFILE_INCOMPLETE", "diagnostic": "SCOUT_PROFILE_INCOMPLETE", "audit_event": "COMPATIBILITY_REJECTED"},
+    "INCOMPATIBLE_PROFILE": {"reject": true, "outcome": "VERSION_INCOMPATIBLE", "diagnostic": "SCOUT_PROFILE_HASH_MISMATCH", "audit_event": "COMPATIBILITY_REJECTED"}
+  }
+}

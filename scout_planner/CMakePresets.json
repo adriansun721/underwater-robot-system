@@ -1,0 +1,124 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "verify",
+      "displayName": "Verify the ROS-independent Scout planning core",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/verify",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "baseline",
+      "displayName": "Measure a clean Scout core baseline",
+      "inherits": "verify",
+      "binaryDir": "${sourceDir}/build/baseline"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "verify",
+      "configurePreset": "verify",
+      "targets": [
+        "scout_core_tests",
+        "scout_fixture_tests",
+        "scout_protobuf_adapter_tests",
+        "scout_planning_context_tests",
+        "scout_hybrid_map_query_tests",
+        "scout_coordination_evaluator_tests",
+        "scout_survey_action_tests",
+        "scout_survey_plan_evidence_tests",
+        "scout_state_lattice_astar_tests",
+        "scout_quintic_bezier_tests",
+        "scout_trajectory_smoother_tests",
+        "scout_continuous_geometry_validator_tests",
+        "golden-schema-check",
+        "static-check"
+      ]
+    },
+    {
+      "name": "baseline",
+      "configurePreset": "baseline",
+      "targets": [
+        "scout_core_tests",
+        "scout_fixture_tests",
+        "scout_protobuf_adapter_tests",
+        "scout_planning_context_tests",
+        "scout_hybrid_map_query_tests",
+        "scout_coordination_evaluator_tests",
+        "scout_survey_action_tests",
+        "scout_survey_plan_evidence_tests",
+        "scout_state_lattice_astar_tests",
+        "scout_quintic_bezier_tests",
+        "scout_trajectory_smoother_tests",
+        "scout_continuous_geometry_validator_tests",
+        "golden-schema-check",
+        "static-check"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "verify",
+      "configurePreset": "verify",
+      "output": {
+        "outputOnFailure": true,
+        "outputJUnitFile": "ctest.xml"
+      }
+    },
+    {
+      "name": "baseline",
+      "configurePreset": "baseline",
+      "output": {
+        "outputOnFailure": true,
+        "outputJUnitFile": "ctest.xml"
+      }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "verify",
+      "displayName": "Configure, build, analyze, and test",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "verify"
+        },
+        {
+          "type": "build",
+          "name": "verify"
+        },
+        {
+          "type": "test",
+          "name": "verify"
+        }
+      ]
+    },
+    {
+      "name": "baseline",
+      "displayName": "Configure, build, analyze, and test a baseline",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "baseline"
+        },
+        {
+          "type": "build",
+          "name": "baseline"
+        },
+        {
+          "type": "test",
+          "name": "baseline"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,242 @@
+syntax = "proto3";
+
+package underwater.contracts.v1;
+
+import "underwater/contracts/v1/common.proto";
+import "underwater/contracts/v1/codes.proto";
+import "underwater/contracts/v1/cooperation.proto";
+
+enum PlanningState {
+  PLANNING_STATE_UNSPECIFIED = 0;
+  PLANNING_INIT = 1;
+  PLANNING_NORMAL = 2;
+  PLANNING_WITH_CAUTION = 3;
+  PLANNING_SUCCESS = 4;
+  PLANNING_PATH_VALID = 5;
+  PLANNING_WAITING_MAP = 6;
+  PLANNING_REQUEST_SCOUT = 7;
+  PLANNING_NO_SOLUTION = 8;
+  PLANNING_NO_SOLUTION_UNDER_COVARIANCE_ENVELOPE = 9;
+  PLANNING_COVARIANCE_ENVELOPE_BREACH = 10;
+  PLANNING_INPUT_INVALID = 11;
+  PLANNING_MAP_EXPIRED = 12;
+  PLANNING_TIMEOUT = 13;
+  PLANNING_MANUAL_OVERRIDE = 14;
+  PLANNING_EMERGENCY_STOP = 15;
+}
+
+message MapVersion {
+  string map_id = 1;
+  uint64 sequence = 2;
+  optional int64 generated_at_monotonic_ns = 3;
+  string frame_id = 4;
+}
+
+message PlanningDependencyVersions {
+  MapVersion map = 1;
+  uint64 reference_line_version = 2;
+  uint64 robot_operating_area_version = 3;
+  uint64 cable_corridor_version = 4;
+  uint64 terrain_gradient_policy_version = 5;
+  uint64 corridor_risk_policy_version = 6;
+  uint64 cable_model_version = 7;
+  uint64 uncertainty_envelope_version = 8;
+  uint64 uncertainty_envelope_generator_version = 9;
+  uint64 execution_operating_envelope_version = 10;
+  uint64 execution_profile_version = 11;
+  uint32 sensor_health_mode = 12;
+  string operating_domain_id = 13;
+}
+
+message PathPoint {
+  optional double arc_length_m = 1;
+  optional double x_m = 2;
+  optional double y_m = 3;
+  optional double yaw_rad = 4;
+  optional double curvature_per_m = 5;
+}
+
+message GeometricPath {
+  uint64 path_version = 1;
+  string frame_id = 2;
+  uint64 reference_line_version = 3;
+  repeated PathPoint points = 4;
+}
+
+message ExecutionSample {
+  optional uint64 time_from_execution_epoch_ns = 1;
+  optional double arc_length_m = 2;
+  optional double ground_speed_mps = 3;
+  optional double ground_acceleration_mps2 = 4;
+  optional double payout_speed_mps = 5;
+  optional double payout_acceleration_mps2 = 6;
+  optional double tension_setpoint_n = 7;
+}
+
+enum InterpolationRule {
+  INTERPOLATION_RULE_UNSPECIFIED = 0;
+  INTERPOLATION_PIECEWISE_LINEAR_V1 = 1;
+}
+
+message ApprovedExecutionEnvelope {
+  optional double minimum_ground_speed_mps = 1;
+  optional double maximum_ground_speed_mps = 2;
+  optional double minimum_ground_acceleration_mps2 = 3;
+  optional double maximum_ground_acceleration_mps2 = 4;
+  optional double minimum_payout_speed_mps = 5;
+  optional double maximum_payout_speed_mps = 6;
+  optional double minimum_payout_acceleration_mps2 = 7;
+  optional double maximum_payout_acceleration_mps2 = 8;
+  optional double minimum_tension_n = 9;
+  optional double maximum_tension_n = 10;
+  optional double maximum_ground_speed_tracking_error_mps = 11;
+  optional double maximum_payout_speed_tracking_error_mps = 12;
+  optional double maximum_tension_tracking_error_n = 13;
+}
+
+message ExecutionProfile {
+  uint64 version = 1;
+  uint64 operating_envelope_version = 2;
+  InterpolationRule interpolation_rule = 3;
+  repeated ExecutionSample samples = 4;
+  ApprovedExecutionEnvelope approved_envelope = 5;
+  ContentIdentity content_identity = 6;
+}
+
+message ImmutablePlan {
+  uint64 plan_sequence = 1;
+  optional int64 created_at_monotonic_ns = 2;
+  GeometricPath robot_path = 3;
+  ExecutionProfile execution_profile = 4;
+  PlanningDependencyVersions dependencies = 5;
+  ContentIdentity content_identity = 6;
+}
+
+message PlanningResult {
+  MessageHeader header = 1;
+  uint64 result_sequence = 2;
+  PlanningState state = 3;
+  OutcomeCode outcome = 4;
+  optional ImmutablePlan candidate = 5;
+  repeated uint32 diagnostic_codes = 6;
+}
+
+message ScoutBezierControlPoint3dEnu {
+  optional double x_m = 1;
+  optional double y_m = 2;
+  optional double z_m = 3;
+}
+
+message ScoutBezierSegment4d {
+  // Offset from the beginning of the trajectory. Segments are contiguous.
+  uint64 start_time_offset_ns = 1;
+  // Strictly positive.
+  uint64 duration_ns = 2;
+  // Exactly six position and six yaw-offset control points for degree five.
+  repeated ScoutBezierControlPoint3dEnu position_control_points = 3;
+  // Rotation displacement relative to ScoutTrajectory4d.initial_yaw_rad.
+  // These values are deliberately not normalized at +/- pi.
+  repeated double yaw_offset_control_points_rad = 4;
+}
+
+message ScoutTrajectory4d {
+  // Exactly mission_enu in v1.
+  string frame_id = 1;
+  // Instantaneous ENU yaw normalized to [-pi, pi).
+  optional double initial_yaw_rad = 2;
+  repeated ScoutBezierSegment4d segments = 3;
+  ContentIdentity trajectory_content_identity = 4;
+}
+
+message ScoutSensorDependency {
+  string sensor_id = 1;
+  uint64 geometry_version = 2;
+  ContentIdentity geometry_content_identity = 3;
+  uint64 health_version = 4;
+  ContentIdentity health_content_identity = 5;
+}
+
+// Exact immutable inputs captured before a single Scout solve begins.
+message ScoutPlanningDependencies {
+  uint64 mission_id = 1;
+  uint64 mission_version = 2;
+  ContentIdentity mission_content_identity = 3;
+  string map_id = 4;
+  uint64 map_version = 5;
+  ContentIdentity map_content_identity = 6;
+  uint64 navigation_version = 7;
+  ContentIdentity navigation_content_identity = 8;
+  // Unique and lexicographically ascending by sensor_id.
+  repeated ScoutSensorDependency sensors = 9;
+  string current_model_id = 10;
+  uint64 current_model_version = 11;
+  ContentIdentity current_content_identity = 12;
+  ProfileRef capability_profile = 13;
+  uint64 thruster_health_version = 14;
+  ContentIdentity thruster_health_content_identity = 15;
+  ProfileRef energy_model = 16;
+  string energy_store_id = 17;
+  uint64 energy_state_version = 18;
+  ContentIdentity energy_state_content_identity = 19;
+  string prediction_id = 20;
+  uint64 prediction_version = 21;
+  ContentIdentity prediction_content_identity = 22;
+  uint64 coordination_version = 23;
+  ContentIdentity coordination_content_identity = 24;
+  ProfileRef planner_configuration = 25;
+  ContentIdentity dependencies_content_identity = 26;
+  ProfileRef timing_profile = 27;
+  ProfileRef interface_limits = 28;
+}
+
+enum ScoutPlanValidationStatus {
+  SCOUT_PLAN_VALIDATION_STATUS_UNSPECIFIED = 0;
+  SCOUT_PLAN_VALIDATION_SAFE = 1;
+  SCOUT_PLAN_VALIDATION_UNSAFE = 2;
+  SCOUT_PLAN_VALIDATION_INCONCLUSIVE = 3;
+  SCOUT_PLAN_VALIDATION_DEPENDENCY_INVALID = 4;
+}
+
+// Produced by an independent PlanSafetyValidator over the exact immutable
+// trajectory, dependency set, and planned survey evidence named below.
+message ScoutPlanValidationReport {
+  ScoutPlanValidationStatus status = 1;
+  OutcomeCode primary_outcome = 2;
+  optional uint64 earliest_failure_time_offset_ns = 3;
+  optional double minimum_collision_margin_m = 4;
+  optional double minimum_separation_margin_m = 5;
+  optional double minimum_energy_margin_j = 6;
+  optional double minimum_capability_margin = 7;
+  optional double survey_coverage_ratio = 8;
+  uint32 refinement_depth = 9;
+  ContentIdentity validated_dependencies_content_identity = 10;
+  ContentIdentity validated_trajectory_content_identity = 11;
+  ContentIdentity validated_survey_evidence_content_identity = 12;
+  ContentIdentity validation_report_content_identity = 13;
+  repeated CodeRef diagnostics = 14;
+}
+
+// Scout planning output only. A candidate plan does not grant execution
+// authority; only a later Scout-specific authorized bundle may do so.
+message ScoutPlan {
+  uint64 plan_sequence = 1;
+  optional int64 created_at_monotonic_ns = 2;
+  ScoutTrajectory4d trajectory = 3;
+  ScoutPlanningDependencies dependencies = 4;
+  SurveyPlanEvidence survey_evidence = 5;
+  ScoutPlanValidationReport validation_report = 6;
+  ContentIdentity plan_content_identity = 7;
+}
+
+message ScoutPlanningResult {
+  MessageHeader header = 1;
+  uint64 result_sequence = 2;
+  OutcomeCode outcome = 3;
+  optional ScoutPlan candidate = 4;
+  // Scout NUC monotonic time in header.source_clock_domain_id.
+  optional int64 evaluated_at_monotonic_ns = 5;
+  // Present for both success and failure so the solve can be reconstructed.
+  ScoutPlanningDependencies dependencies = 6;
+  repeated CodeRef diagnostics = 7;
+  ContentIdentity result_content_identity = 8;
+}

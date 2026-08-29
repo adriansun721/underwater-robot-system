@@ -1,0 +1,369 @@
+syntax = "proto3";
+
+package underwater.contracts.v1;
+
+import "underwater/contracts/v1/common.proto";
+import "underwater/contracts/v1/codes.proto";
+import "underwater/contracts/v1/planning.proto";
+import "underwater/contracts/v1/state.proto";
+
+// Strong marker types prevent a generic identifier from being accepted in the
+// wrong physical execution authority domain. They intentionally carry no
+// mutable identity or watermark state.
+message MainLayingExecutionAuthorityDomain {}
+
+message ScoutMotionExecutionAuthorityDomain {}
+
+message ExecutionLease {
+  uint64 lease_sequence = 1;
+  uint64 plan_sequence = 2;
+  uint64 execution_profile_version = 3;
+  optional int64 validated_at_monotonic_ns = 4;
+  optional int64 expires_at_monotonic_ns = 5;
+  optional double remaining_start_arc_length_m = 6;
+  optional double remaining_end_arc_length_m = 7;
+  PlanningDependencyVersions dependencies = 8;
+  ContentIdentity content_identity = 9;
+}
+
+// Main-laying-domain grant only. It can never authorize Scout FCU motion.
+message AuthorizedExecutionBundle {
+  MessageHeader header = 1;
+  uint64 bundle_sequence = 2;
+  ImmutablePlan plan = 3;
+  ExecutionLease lease = 4;
+  optional int64 valid_not_before_monotonic_ns = 5;
+  optional int64 execution_epoch_monotonic_ns = 6;
+  ProfileRef timing_profile = 7;
+  ProfileRef interface_limits = 8;
+  ProfileRef cable_profile = 9;
+  ProfileRef emergency_stop_policy = 10;
+  ContentIdentity bundle_content_identity = 11;
+  MainLayingExecutionAuthorityDomain domain = 12;
+}
+
+message ScoutExecutionLease {
+  uint64 lease_sequence = 1;
+  uint64 plan_sequence = 2;
+  ContentIdentity plan_content_identity = 3;
+  optional int64 validated_at_monotonic_ns = 4;
+  optional int64 expires_at_monotonic_ns = 5;
+  optional uint64 authorized_start_time_offset_ns = 6;
+  uint64 authorized_end_time_offset_ns = 7;
+  ScoutPlanningDependencies dependencies = 8;
+  ContentIdentity content_identity = 9;
+}
+
+message ScoutAuthorizedExecutionBundle {
+  MessageHeader header = 1;
+  ScoutMotionExecutionAuthorityDomain domain = 2;
+  uint64 bundle_sequence = 3;
+  ScoutPlan plan = 4;
+  ScoutExecutionLease lease = 5;
+  optional int64 valid_not_before_monotonic_ns = 6;
+  optional int64 execution_epoch_monotonic_ns = 7;
+  ProfileRef timing_profile = 8;
+  ProfileRef interface_limits = 9;
+  ProfileRef safety_gate_configuration = 10;
+  ContentIdentity bundle_content_identity = 11;
+}
+
+enum BundleAckState {
+  BUNDLE_ACK_STATE_UNSPECIFIED = 0;
+  BUNDLE_ACK_INSTALLED = 1;
+  BUNDLE_ACK_REJECTED = 2;
+}
+
+message ScoutBundleAck {
+  MessageHeader header = 1;
+  uint64 bundle_sequence = 2;
+  uint64 plan_sequence = 3;
+  uint64 lease_sequence = 4;
+  BundleAckState state = 5;
+  optional int64 installed_at_monotonic_ns = 6;
+  ContentIdentity observed_bundle_identity = 7;
+  OutcomeCode outcome = 8;
+  repeated uint32 diagnostic_codes = 9;
+}
+
+enum ScoutFcuControlMode {
+  SCOUT_FCU_CONTROL_MODE_UNSPECIFIED = 0;
+  SCOUT_FCU_CONTROL_POSITION_YAW = 1;
+  SCOUT_FCU_CONTROL_VELOCITY_YAW_RATE = 2;
+  SCOUT_FCU_CONTROL_HOLD = 3;
+  SCOUT_FCU_CONTROL_RISK_ACTION = 4;
+}
+
+enum ScoutRiskAction {
+  SCOUT_RISK_ACTION_UNSPECIFIED = 0;
+  SCOUT_RISK_ACTION_NONE = 1;
+  SCOUT_RISK_ACTION_BRAKE = 2;
+  SCOUT_RISK_ACTION_HOLD = 3;
+  SCOUT_RISK_ACTION_RETREAT = 4;
+  SCOUT_RISK_ACTION_RETURN = 5;
+  SCOUT_RISK_ACTION_ASCEND = 6;
+}
+
+message ScoutMotionTarget3dEnu {
+  optional double x_m = 1;
+  optional double y_m = 2;
+  optional double z_m = 3;
+  optional double yaw_rad = 4;
+  optional double velocity_x_mps = 5;
+  optional double velocity_y_mps = 6;
+  optional double velocity_z_mps = 7;
+  optional double yaw_rate_radps = 8;
+  string frame_id = 9;
+}
+
+message ScoutMeasuredPose3dEnu {
+  optional double x_m = 1;
+  optional double y_m = 2;
+  optional double z_m = 3;
+  optional double yaw_rad = 4;
+  string frame_id = 5;
+}
+
+message ScoutMeasuredVelocity3dEnu {
+  optional double x_mps = 1;
+  optional double y_mps = 2;
+  optional double z_mps = 3;
+  optional double yaw_rate_radps = 4;
+  string frame_id = 5;
+}
+
+message ScoutMeasuredExecutionState {
+  ScoutMeasuredPose3dEnu pose = 1;
+  ScoutMeasuredVelocity3dEnu velocity = 2;
+  optional int64 observed_at_monotonic_ns = 3;
+}
+
+message ScoutLocalSafetyOverride {
+  optional bool active = 1;
+  CodeRef reason_fault = 2;
+  StopLevel stop_level = 3;
+  optional int64 active_since_monotonic_ns = 4;
+  ScoutRiskAction risk_action = 5;
+}
+
+message ScoutExecutionFeedback {
+  MessageHeader header = 1;
+  uint64 bundle_sequence = 2;
+  ContentIdentity bundle_content_identity = 3;
+  uint64 plan_sequence = 4;
+  ContentIdentity plan_content_identity = 5;
+  ContentIdentity trajectory_content_identity = 6;
+  uint64 lease_sequence = 7;
+  ContentIdentity lease_content_identity = 8;
+  optional uint64 profile_time_offset_ns = 9;
+  ScoutMotionTarget3dEnu profile_target = 10;
+  ScoutMotionTarget3dEnu applied_target = 11;
+  ScoutMeasuredExecutionState measured_state = 12;
+  optional bool limit_applied = 13;
+  CodeRef limit_diagnostic = 14;
+  ScoutFcuControlMode control_mode = 15;
+  ScoutLocalSafetyOverride safety_override = 16;
+  bytes fcu_session_id = 17;
+  uint64 fcu_command_sequence = 18;
+}
+
+enum ScoutRevocationReason {
+  SCOUT_REVOCATION_REASON_UNSPECIFIED = 0;
+  SCOUT_REVOCATION_TRACKING_DEVIATION = 1;
+  SCOUT_REVOCATION_THRUSTER_HEALTH_CHANGED = 2;
+  SCOUT_REVOCATION_MAP_CHANGED = 3;
+  SCOUT_REVOCATION_COMMUNICATION_LOST = 4;
+  SCOUT_REVOCATION_LEASE_EXPIRED = 5;
+  SCOUT_REVOCATION_LOCALIZATION_INVALID = 6;
+  SCOUT_REVOCATION_ENERGY_INSUFFICIENT = 7;
+  SCOUT_REVOCATION_SENSOR_INVALID = 8;
+  SCOUT_REVOCATION_COORDINATION_INVALID = 9;
+  SCOUT_REVOCATION_PLAN_INTEGRITY_MISMATCH = 10;
+  SCOUT_REVOCATION_EMERGENCY_STOP = 11;
+}
+
+message ScoutExecutionRevocation {
+  MessageHeader header = 1;
+  ScoutMotionExecutionAuthorityDomain domain = 2;
+  uint64 revocation_sequence = 3;
+  uint64 bundle_sequence = 4;
+  ContentIdentity bundle_content_identity = 5;
+  uint64 plan_sequence = 6;
+  ContentIdentity plan_content_identity = 7;
+  ContentIdentity trajectory_content_identity = 8;
+  uint64 lease_sequence = 9;
+  ContentIdentity lease_content_identity = 10;
+  StopLevel requested_stop = 11;
+  ScoutRiskAction requested_risk_action = 12;
+  ScoutRevocationReason reason = 13;
+  CodeRef primary_fault = 14;
+  repeated CodeRef secondary_diagnostics = 15;
+  optional int64 effective_at_monotonic_ns = 16;
+  ContentIdentity revocation_content_identity = 17;
+}
+
+enum ScoutRevocationAckState {
+  SCOUT_REVOCATION_ACK_STATE_UNSPECIFIED = 0;
+  SCOUT_REVOCATION_RECEIVED = 1;
+  SCOUT_REVOCATION_APPLIED = 2;
+  SCOUT_REVOCATION_REJECTED = 3;
+}
+
+message ScoutExecutionRevocationAck {
+  MessageHeader header = 1;
+  uint64 revocation_sequence = 2;
+  uint64 bundle_sequence = 3;
+  uint64 plan_sequence = 4;
+  uint64 lease_sequence = 5;
+  ContentIdentity observed_revocation_identity = 6;
+  ScoutRevocationAckState state = 7;
+  optional int64 acknowledged_at_monotonic_ns = 8;
+  OutcomeCode outcome = 9;
+  repeated CodeRef diagnostics = 10;
+  bytes fcu_session_id = 11;
+}
+
+message BundleAck {
+  MessageHeader header = 1;
+  uint64 bundle_sequence = 2;
+  uint64 plan_sequence = 3;
+  uint64 lease_sequence = 4;
+  BundleAckState state = 5;
+  optional int64 installed_at_monotonic_ns = 6;
+  ContentIdentity observed_bundle_identity = 7;
+  OutcomeCode outcome = 8;
+  repeated uint32 diagnostic_codes = 9;
+}
+
+message ExecutionRevocation {
+  MessageHeader header = 1;
+  uint64 revocation_sequence = 2;
+  uint64 bundle_sequence = 3;
+  uint64 plan_sequence = 4;
+  uint64 lease_sequence = 5;
+  StopLevel requested_stop = 6;
+  uint32 primary_fault_code = 7;
+  repeated uint32 secondary_diagnostic_codes = 8;
+  optional int64 effective_at_monotonic_ns = 9;
+}
+
+enum AuthorityEventKind {
+  AUTHORITY_EVENT_KIND_UNSPECIFIED = 0;
+  AUTHORITY_EVENT_CANDIDATE_READY = 1;
+  AUTHORITY_EVENT_REEVALUATE = 2;
+  AUTHORITY_EVENT_REVOKE_REQUESTED = 3;
+  AUTHORITY_EVENT_FEEDBACK_STALE = 4;
+  AUTHORITY_EVENT_ENVELOPE_DEVIATION = 5;
+  AUTHORITY_EVENT_FAULT_CHANGED = 6;
+}
+
+message AuthorityEvent {
+  MessageHeader header = 1;
+  bytes request_id = 2;
+  AuthorityEventKind kind = 3;
+  optional uint64 bundle_sequence = 4;
+  optional uint64 plan_sequence = 5;
+  optional uint64 lease_sequence = 6;
+  optional uint32 fault_code = 7;
+  repeated uint32 diagnostic_codes = 8;
+}
+
+message ControlVector {
+  optional double ground_speed_mps = 1;
+  optional double ground_acceleration_mps2 = 2;
+  optional double payout_speed_mps = 3;
+  optional double payout_acceleration_mps2 = 4;
+  optional double tension_n = 5;
+}
+
+message AppliedControlVector {
+  ControlVector base = 1;
+  optional double left_track_speed_mps = 2;
+  optional double right_track_speed_mps = 3;
+}
+
+message MeasuredExecutionState {
+  ControlVector base = 1;
+  optional double left_track_speed_mps = 2;
+  optional double right_track_speed_mps = 3;
+  optional double tracked_arc_length_m = 4;
+  optional int64 observed_at_monotonic_ns = 5;
+}
+
+enum LocalControlState {
+  LOCAL_CONTROL_STATE_UNSPECIFIED = 0;
+  LOCAL_CONTROL_STANDBY = 1;
+  LOCAL_CONTROL_TRACKING = 2;
+  LOCAL_CONTROL_LIMITING = 3;
+  LOCAL_CONTROL_PROTECTIVE_STOP = 4;
+  LOCAL_CONTROL_EMERGENCY_STOP = 5;
+  LOCAL_CONTROL_FAULT = 6;
+}
+
+message LocalSafetyOverride {
+  optional bool active = 1;
+  uint32 reason_fault_code = 2;
+  StopLevel stop_level = 3;
+  optional int64 active_since_monotonic_ns = 4;
+}
+
+message ExecutionFeedback {
+  MessageHeader header = 1;
+  uint64 bundle_sequence = 2;
+  uint64 plan_sequence = 3;
+  uint64 execution_profile_version = 4;
+  uint64 lease_sequence = 5;
+  optional uint64 profile_time_ns = 6;
+  optional double profile_arc_length_m = 7;
+  ControlVector profile_target = 8;
+  AppliedControlVector applied_target = 9;
+  MeasuredExecutionState measured_state = 10;
+  optional bool limit_applied = 11;
+  optional uint32 limit_diagnostic_code = 12;
+  optional uint32 can_session_id = 13;
+  optional uint32 can_profile_sequence = 14;
+  LocalControlState local_control_state = 15;
+  LocalSafetyOverride safety_override = 16;
+}
+
+message ExecutionStatus {
+  MessageHeader header = 1;
+  ExecutionAuthorityState observed_authority_state = 2;
+  optional uint64 active_bundle_sequence = 3;
+  optional uint64 active_plan_sequence = 4;
+  optional uint64 active_lease_sequence = 5;
+  LocalControlState local_control_state = 6;
+  optional bool can_execute = 7;
+  repeated uint32 active_fault_codes = 8;
+}
+
+message ControlledStopProfile {
+  uint64 version = 1;
+  repeated ExecutionSample samples = 2;
+  ContentIdentity content_identity = 3;
+}
+
+message AuthorizedControlledStop {
+  MessageHeader header = 1;
+  uint64 stop_authorization_sequence = 2;
+  uint64 terminated_bundle_sequence = 3;
+  optional int64 execution_epoch_monotonic_ns = 4;
+  optional int64 expires_at_monotonic_ns = 5;
+  ControlledStopProfile stop_profile = 6;
+  ContentIdentity content_identity = 7;
+}
+
+enum EmergencyStopRequestKind {
+  EMERGENCY_STOP_REQUEST_KIND_UNSPECIFIED = 0;
+  EMERGENCY_STOP_TRIGGER = 1;
+  EMERGENCY_STOP_LOCAL_RESET_REQUEST = 2;
+}
+
+message EmergencyStopRequest {
+  MessageHeader header = 1;
+  bytes request_id = 2;
+  EmergencyStopRequestKind kind = 3;
+  uint32 source_id = 4;
+  uint32 reason_fault_code = 5;
+  optional string authenticated_local_operator_id = 6;
+}

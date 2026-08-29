@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package underwater.contracts.v1;
+
+import "underwater/contracts/v1/common.proto";
+import "underwater/contracts/v1/codes.proto";
+import "underwater/contracts/v1/state.proto";
+
+enum FaultLifecycle {
+  FAULT_LIFECYCLE_UNSPECIFIED = 0;
+  FAULT_ACTIVE = 1;
+  FAULT_CLEARED_CONDITION = 2;
+  FAULT_CLEARED_EXPLICITLY = 3;
+}
+
+message FaultReport {
+  MessageHeader header = 1;
+  uint32 primary_fault_code = 2;
+  repeated uint32 secondary_diagnostic_codes = 3;
+  FaultLifecycle lifecycle = 4;
+  optional bool latched = 5;
+  optional int64 first_observed_at_monotonic_ns = 6;
+  optional int64 last_observed_at_monotonic_ns = 7;
+  uint64 occurrence_count = 8;
+}
+
+message DiagnosticEvent {
+  MessageHeader header = 1;
+  uint32 diagnostic_code = 2;
+  optional string human_message = 3;
+  map<string, string> bounded_attributes = 4;
+}
+
+enum AuditEventKind {
+  AUDIT_EVENT_KIND_UNSPECIFIED = 0;
+  AUDIT_BUNDLE_ISSUED = 1;
+  AUDIT_BUNDLE_INSTALLED = 2;
+  AUDIT_BUNDLE_REJECTED = 3;
+  AUDIT_LEASE_REVOKED = 4;
+  AUDIT_LEASE_EXPIRED = 5;
+  AUDIT_STATE_TRANSITION = 6;
+  AUDIT_ILLEGAL_TRANSITION_REJECTED = 7;
+  AUDIT_PROFILE_PREPARED = 8;
+  AUDIT_PROFILE_ACTIVATED = 9;
+  AUDIT_FAULT_CHANGED = 10;
+  AUDIT_STOP_TRIGGERED = 11;
+  AUDIT_STOP_COMPLETED = 12;
+  AUDIT_EMERGENCY_STOP_RESET = 13;
+  AUDIT_MANIFEST_CHANGED = 14;
+  AUDIT_SESSION_CHANGED = 15;
+  AUDIT_COMPATIBILITY_REJECTED = 16;
+}
+
+message SafetyAuditEvent {
+  MessageHeader header = 1;
+  AuditEventKind kind = 2;
+  optional uint64 bundle_sequence = 3;
+  optional uint64 plan_sequence = 4;
+  optional uint64 execution_profile_version = 5;
+  optional uint64 lease_sequence = 6;
+  optional ProfileRef configuration = 7;
+  optional uint32 outcome_code = 8;
+  optional uint32 fault_code = 9;
+  repeated uint32 diagnostic_codes = 10;
+  optional StateDomain state_domain = 11;
+  optional uint32 previous_state = 12;
+  optional uint32 next_state = 13;
+  optional StopLevel safety_action = 14;
+  optional uint64 dropped_audit_record_count = 15;
+  // Typed v1 additions; legacy scalar fields 8-10 remain for wire compatibility.
+  CodeRef outcome = 16;
+  CodeRef fault = 17;
+  repeated CodeRef diagnostics = 18;
+  CodeRef transition_trigger = 19;
+  optional StreamId rejected_message_stream = 20;
+  optional uint32 rejected_enum_numeric_value = 21;
+}

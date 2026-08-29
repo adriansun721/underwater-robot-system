@@ -1,0 +1,231 @@
+syntax = "proto3";
+
+package underwater.contracts.v1;
+
+import "underwater/contracts/v1/common.proto";
+import "underwater/contracts/v1/codes.proto";
+import "underwater/contracts/v1/execution.proto";
+import "underwater/contracts/v1/state.proto";
+
+message StreamTimingRule {
+  StreamId stream_id = 1;
+  optional uint64 publish_period_ns = 2;
+  optional uint64 maximum_jitter_ns = 3;
+  optional uint64 stale_warning_ns = 4;
+  optional uint64 reject_or_revoke_ns = 5;
+  optional uint64 ack_timeout_ns = 6;
+}
+
+message TimingProfile {
+  ProfileRef identity = 1;
+  string operating_domain_id = 2;
+  optional bool production = 3;
+  repeated StreamTimingRule stream_rules = 4;
+  uint64 lease_duration_ns = 5;
+  uint64 lease_renewal_margin_ns = 6;
+  uint64 can_command_watchdog_ns = 7;
+  uint64 hard_safety_timeout_ns = 8;
+  optional uint64 scout_mission_decision_timeout_ns = 9;
+  optional uint64 scout_mission_admission_window_ns = 10;
+  optional uint64 scout_navigation_publish_period_ns = 11;
+  optional uint64 scout_navigation_stale_warning_ns = 12;
+  optional uint64 scout_navigation_reject_ns = 13;
+  optional uint64 scout_sensor_health_publish_period_ns = 14;
+  optional uint64 scout_sensor_health_stale_warning_ns = 15;
+  optional uint64 scout_sensor_health_reject_ns = 16;
+  optional uint64 scout_current_publish_period_ns = 17;
+  optional uint64 scout_current_stale_warning_ns = 18;
+  optional uint64 scout_current_reject_ns = 19;
+  optional uint64 scout_thruster_health_publish_period_ns = 20;
+  optional uint64 scout_thruster_health_stale_warning_ns = 21;
+  optional uint64 scout_thruster_health_reject_ns = 22;
+  optional uint64 scout_energy_state_publish_period_ns = 23;
+  optional uint64 scout_energy_state_stale_warning_ns = 24;
+  optional uint64 scout_energy_state_reject_ns = 25;
+  optional uint64 main_robot_prediction_publish_period_ns = 26;
+  optional uint64 main_robot_prediction_reject_ns = 27;
+  optional uint64 coordination_constraint_publish_period_ns = 28;
+  optional uint64 coordination_constraint_reject_ns = 29;
+  optional uint64 coordination_maximum_sync_uncertainty_ns = 30;
+  optional uint64 scout_authorized_bundle_ack_timeout_ns = 31;
+  optional uint64 scout_lease_duration_ns = 32;
+  optional uint64 scout_lease_renewal_margin_ns = 33;
+  optional uint64 scout_authorization_start_window_ns = 34;
+  optional uint64 scout_execution_feedback_publish_period_ns = 35;
+  optional uint64 scout_execution_feedback_stale_warning_ns = 36;
+  optional uint64 scout_execution_feedback_software_revoke_ns = 37;
+  optional uint64 scout_revocation_retry_period_ns = 38;
+  optional uint64 scout_revocation_ack_timeout_ns = 39;
+  optional uint64 scout_fcu_heartbeat_period_ns = 40;
+  optional uint64 scout_fcu_degraded_timeout_ns = 41;
+  optional uint64 scout_fcu_lost_timeout_ns = 42;
+  optional uint64 scout_fcu_command_watchdog_ns = 43;
+  optional uint64 scout_hard_safety_timeout_ns = 44;
+}
+
+message InterfaceLimits {
+  ProfileRef identity = 1;
+  string operating_domain_id = 2;
+  optional bool production = 3;
+  uint64 maximum_bundle_bytes = 4;
+  uint32 maximum_path_points = 5;
+  uint32 maximum_execution_samples = 6;
+  uint32 maximum_repeated_items = 7;
+  uint32 maximum_string_bytes = 8;
+  uint32 maximum_diagnostics = 9;
+  uint32 maximum_pending_requests = 10;
+  uint64 maximum_map_chunk_bytes = 11;
+  uint32 maximum_audit_queue_depth = 12;
+  uint32 maximum_telemetry_queue_depth = 13;
+  uint64 maximum_map_snapshot_bytes = 14;
+  uint32 maximum_map_chunks_per_snapshot = 15;
+  uint64 maximum_map_cells_per_layer = 16;
+  uint32 maximum_map_semantic_regions = 17;
+  uint64 maximum_navigation_state_bytes = 18;
+  uint64 maximum_sensor_geometry_bytes = 19;
+  uint64 maximum_sensor_health_bytes = 20;
+  uint64 maximum_current_estimate_bytes = 21;
+  uint32 maximum_sensors_per_context = 22;
+  uint64 maximum_capability_profile_bytes = 23;
+  uint64 maximum_thruster_health_bytes = 24;
+  uint64 maximum_energy_model_bytes = 25;
+  uint64 maximum_energy_state_bytes = 26;
+  uint32 maximum_thrusters_per_vehicle = 27;
+  uint64 maximum_main_robot_prediction_bytes = 28;
+  uint32 maximum_prediction_intervals = 29;
+  uint64 maximum_coordination_constraint_bytes = 30;
+  uint64 maximum_scout_planning_result_bytes = 31;
+  uint32 maximum_scout_plan_segments = 32;
+  uint64 maximum_scout_authorized_bundle_bytes = 33;
+  uint64 maximum_scout_execution_feedback_bytes = 34;
+  uint64 maximum_scout_execution_revocation_bytes = 35;
+  uint64 maximum_scout_execution_revocation_ack_bytes = 36;
+  uint64 maximum_state_transition_bytes = 37;
+  uint64 maximum_scout_status_bytes = 38;
+  uint64 maximum_fault_report_bytes = 39;
+  uint64 maximum_diagnostic_event_bytes = 40;
+  uint64 maximum_safety_audit_event_bytes = 41;
+  uint64 maximum_scout_configuration_bytes = 42;
+  uint64 maximum_loss_policy_bytes = 43;
+}
+
+message ScoutCommunicationLossRule {
+  CommunicationState state = 1;
+  optional bool allow_new_authorization = 2;
+  optional bool allow_authorized_prefix_to_complete = 3;
+  optional bool revoke_active_authorization = 4;
+  StopLevel stop_level = 5;
+  ScoutRiskAction risk_action = 6;
+  CodeRef fault = 7;
+}
+
+message ScoutCommunicationLossPolicy {
+  ProfileRef identity = 1;
+  string operating_domain_id = 2;
+  ChannelId channel_id = 3;
+  ScoutCommunicationLossRule degraded = 4;
+  ScoutCommunicationLossRule lost = 5;
+  optional bool recovery_requires_new_session = 6;
+  optional bool recovery_requires_fresh_evidence = 7;
+  optional bool recovery_restores_authorization = 8;
+}
+
+message ScoutRiskActionRule {
+  ScoutRiskAction action = 1;
+  StopLevel minimum_stop_level = 2;
+  optional bool requires_revocation = 3;
+  optional bool permits_new_exploration = 4;
+  ScoutMissionState terminal_state = 5;
+  CodeRef failure_fault = 6;
+}
+
+message ScoutConfigurationProfile {
+  ProfileRef identity = 1;
+  string operating_domain_id = 2;
+  optional bool production = 3;
+  ProfileRef timing_profile = 4;
+  ProfileRef interface_limits = 5;
+  ProfileRef code_registry = 6;
+  ProfileRef state_transition_registry = 7;
+  ProfileRef capability_profile = 8;
+  ProfileRef energy_model = 9;
+  repeated ProfileRef sensor_geometry_profiles = 10;
+  ProfileRef planner_configuration = 11;
+  ProfileRef safety_gate_configuration = 12;
+  repeated ScoutCommunicationLossPolicy loss_policies = 13;
+  repeated ScoutRiskActionRule risk_action_rules = 14;
+}
+
+enum EmergencyTrackAction {
+  EMERGENCY_TRACK_ACTION_UNSPECIFIED = 0;
+  EMERGENCY_TRACK_BRAKE = 1;
+  EMERGENCY_TRACK_POWER_CUT = 2;
+}
+
+enum EmergencyCableAction {
+  EMERGENCY_CABLE_ACTION_UNSPECIFIED = 0;
+  EMERGENCY_CABLE_LIMITED_PAYOUT = 1;
+  EMERGENCY_CABLE_HOLD_TENSION = 2;
+  EMERGENCY_CABLE_LOCK_MECHANISM = 3;
+  EMERGENCY_CABLE_POWER_CUT = 4;
+}
+
+message EmergencyStopPolicy {
+  ProfileRef identity = 1;
+  EmergencyTrackAction track_action = 2;
+  EmergencyCableAction cable_action = 3;
+  string certification_evidence_id = 4;
+}
+
+message CableProfile {
+  ProfileRef identity = 1;
+  string operating_domain_id = 2;
+  string calibration_dataset_id = 3;
+  optional double diameter_m = 4;
+  optional double mass_per_length_kgpm = 5;
+  optional double minimum_bend_radius_m = 6;
+  optional double tension_min_n = 7;
+  optional double tension_setpoint_n = 8;
+  optional double tension_warning_n = 9;
+  optional double tension_trip_n = 10;
+  optional double maximum_tension_rate_nps = 11;
+  optional double payout_speed_min_mps = 12;
+  optional double payout_speed_max_mps = 13;
+  optional double payout_acceleration_max_mps2 = 14;
+  ProfileRef emergency_stop_policy = 15;
+}
+
+message ContractManifest {
+  // header.manifest is absent only during bootstrap negotiation.
+  MessageHeader header = 1;
+  uint32 schema_major = 2;
+  uint32 schema_minor = 3;
+  ContentIdentity protobuf_descriptor_identity = 4;
+  ProfileRef code_registry = 5;
+  ProfileRef can_protocol = 6;
+  ProfileRef timing_profile = 7;
+  ProfileRef interface_limits = 8;
+  repeated string supported_features = 9;
+  ContentIdentity manifest_content_identity = 10;
+  ProfileRef scout_state_transition_registry = 11;
+  ProfileRef scout_configuration = 12;
+  repeated ProfileRef scout_loss_policies = 13;
+}
+
+enum ProfileTransactionPhase {
+  PROFILE_TRANSACTION_PHASE_UNSPECIFIED = 0;
+  PROFILE_PREPARE = 1;
+  PROFILE_PREPARED = 2;
+  PROFILE_ACTIVATE = 3;
+  PROFILE_ACTIVE = 4;
+  PROFILE_REJECTED = 5;
+}
+
+message ProfileTransaction {
+  MessageHeader header = 1;
+  bytes request_id = 2;
+  ProfileTransactionPhase phase = 3;
+  ProfileRef profile = 4;
+  uint32 can_session_id = 5;
+  optional uint32 outcome_code = 6;
+}

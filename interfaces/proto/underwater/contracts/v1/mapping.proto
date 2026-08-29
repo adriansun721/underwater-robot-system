@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package underwater.contracts.v1;
+
+import "underwater/contracts/v1/common.proto";
+import "underwater/contracts/v1/cooperation.proto";
+
+message GridGeometry2d {
+  optional double origin_x_m = 1;
+  optional double origin_y_m = 2;
+  optional double resolution_x_m = 3;
+  optional double resolution_y_m = 4;
+  uint32 cell_count_x = 5;
+  uint32 cell_count_y = 6;
+  string frame_id = 7;
+}
+
+message GridGeometry3d {
+  optional double origin_x_m = 1;
+  optional double origin_y_m = 2;
+  optional double origin_z_m = 3;
+  optional double resolution_x_m = 4;
+  optional double resolution_y_m = 5;
+  optional double resolution_z_m = 6;
+  uint32 cell_count_x = 7;
+  uint32 cell_count_y = 8;
+  uint32 cell_count_z = 9;
+  string frame_id = 10;
+}
+
+enum VoxelState {
+  VOXEL_STATE_UNSPECIFIED = 0;
+  VOXEL_FREE = 1;
+  VOXEL_OCCUPIED = 2;
+  VOXEL_UNKNOWN = 3;
+  VOXEL_STALE = 4;
+  VOXEL_CONFLICTED = 5;
+}
+
+message SeafloorElevationLayer {
+  GridGeometry2d grid = 1;
+  repeated float elevation_z_m = 2;
+  repeated float quality = 3;
+}
+
+message VoxelOccupancyLayer {
+  GridGeometry3d grid = 1;
+  repeated VoxelState state = 2;
+}
+
+enum EsdfConvention {
+  ESDF_CONVENTION_UNSPECIFIED = 0;
+  ESDF_NONNEGATIVE_DISTANCE = 1;
+  ESDF_SIGNED_DISTANCE = 2;
+}
+
+message EsdfLayer {
+  GridGeometry3d grid = 1;
+  EsdfConvention convention = 2;
+  repeated float distance_m = 3;
+}
+
+message AllowedWaterLayer {
+  GridGeometry3d grid = 1;
+  repeated bool allowed = 2;
+}
+
+enum SemanticClass {
+  SEMANTIC_CLASS_UNSPECIFIED = 0;
+  SEMANTIC_NO_ENTRY = 1;
+  SEMANTIC_COMMUNICATION_SHADOW = 2;
+  SEMANTIC_SPECIAL_REGION = 3;
+}
+
+message SemanticRegion {
+  string region_id = 1;
+  SemanticClass semantic_class = 2;
+  Region3dEnu region = 3;
+}
+
+message HybridMapSnapshot {
+  // The producer's boot-scoped monotonic clock domain.
+  string source_clock_domain_id = 1;
+  string map_id = 2;
+  uint64 map_version = 3;
+  ContentIdentity map_content_identity = 4;
+  Region3dEnu map_region = 5;
+  ProfileRef sensor_extrinsic = 6;
+  ProfileRef mapping_parameters = 7;
+  SeafloorElevationLayer seafloor = 8;
+  VoxelOccupancyLayer occupancy = 9;
+  EsdfLayer esdf = 10;
+  AllowedWaterLayer allowed_water = 11;
+  repeated SemanticRegion semantic_regions = 12;
+  optional int64 generated_at_monotonic_ns = 13;
+  SynchronizedObservationTime observed_at = 14;
+}

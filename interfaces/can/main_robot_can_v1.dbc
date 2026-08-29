@@ -1,0 +1,118 @@
+VERSION "main-robot-can/v1"
+
+NS_ :
+  NS_DESC_
+  CM_
+  BA_DEF_
+  BA_
+  VAL_
+
+BS_:
+
+BU_: NUC STM32
+
+BO_ 1 SYS_HEARTBEAT: 8 NUC
+ SG_ NodeId : 0|8@1+ (1,0) [0|255] "" STM32
+ SG_ RuntimeState : 8|8@1+ (1,0) [0|255] "" STM32
+ SG_ EmergencyStopAsserted : 16|8@1+ (1,0) [0|1] "" STM32
+ SG_ HeartbeatSequence : 24|8@1+ (1,0) [0|255] "" STM32
+ SG_ SessionTag : 32|16@1+ (1,0) [0|65535] "" STM32
+ SG_ Crc16 : 48|16@1+ (1,0) [0|65535] "" STM32
+
+BO_ 2 SYS_ESTOP: 8 NUC
+ SG_ EmergencyReason : 0|8@1+ (1,0) [0|255] "" STM32
+ SG_ SourceNode : 8|8@1+ (1,0) [0|255] "" STM32
+ SG_ EmergencyEventSequence : 16|16@1+ (1,0) [0|65535] "" STM32
+ SG_ SessionTag : 32|16@1+ (1,0) [0|65535] "" STM32
+ SG_ Crc16 : 48|16@1+ (1,0) [0|65535] "" STM32
+
+BO_ 3 SYS_SESSION: 8 NUC
+ SG_ ProtocolMajor : 0|8@1+ (1,0) [1|255] "" STM32
+ SG_ CableProfileSlot : 8|8@1+ (1,0) [0|255] "" STM32
+ SG_ SessionId : 16|32@1+ (1,0) [1|4294967295] "" STM32
+ SG_ Crc16 : 48|16@1+ (1,0) [0|65535] "" STM32
+
+BO_ 256 CMD_TRACK_CTRL: 8 NUC
+ SG_ LeftTrackTarget : 0|16@1- (0.001,0) [-32.768|32.767] "m/s" STM32
+ SG_ RightTrackTarget : 16|16@1- (0.001,0) [-32.768|32.767] "m/s" STM32
+ SG_ ControlMode : 32|8@1+ (1,0) [0|255] "" STM32
+ SG_ ProfileSequence : 40|8@1+ (1,0) [0|255] "" STM32
+ SG_ Crc16 : 48|16@1+ (1,0) [0|65535] "" STM32
+
+BO_ 272 CMD_CABLE_CTRL: 8 NUC
+ SG_ TensionTarget : 0|16@1+ (0.1,0) [0|6553.5] "N" STM32
+ SG_ PayoutSpeedFeedforward : 16|16@1- (0.001,0) [-32.768|32.767] "m/s" STM32
+ SG_ CableMode : 32|8@1+ (1,0) [0|255] "" STM32
+ SG_ ProfileSequence : 40|8@1+ (1,0) [0|255] "" STM32
+ SG_ Crc16 : 48|16@1+ (1,0) [0|65535] "" STM32
+
+BO_ 273 CMD_CABLE_AUX: 8 NUC
+ SG_ AuxiliaryCommandBits : 0|8@1+ (1,0) [0|255] "" STM32
+ SG_ AuxiliarySequence : 8|8@1+ (1,0) [0|255] "" STM32
+ SG_ MechanismTargetPosition : 16|16@1- (0.001,0) [-32.768|32.767] "m" STM32
+ SG_ Reserved : 32|16@1+ (1,0) [0|65535] "" STM32
+ SG_ Crc16 : 48|16@1+ (1,0) [0|65535] "" STM32
+
+BO_ 512 FB_TRACK_STATUS: 8 STM32
+ SG_ LeftTrackMeasured : 0|16@1- (0.001,0) [-32.768|32.767] "m/s" NUC
+ SG_ RightTrackMeasured : 16|16@1- (0.001,0) [-32.768|32.767] "m/s" NUC
+ SG_ TrackFaultBits : 32|8@1+ (1,0) [0|255] "" NUC
+ SG_ CurrentTrackMode : 40|8@1+ (1,0) [0|255] "" NUC
+ SG_ EchoProfileSequence : 48|8@1+ (1,0) [0|255] "" NUC
+ SG_ LocalControlState : 56|8@1+ (1,0) [0|255] "" NUC
+
+BO_ 528 FB_CABLE_STATUS: 8 STM32
+ SG_ TensionMeasured : 0|16@1+ (0.1,0) [0|6553.5] "N" NUC
+ SG_ PayoutSpeedMeasured : 16|16@1- (0.001,0) [-32.768|32.767] "m/s" NUC
+ SG_ GuideArmAngle : 32|16@1- (0.000174532925199433,0) [-5.719094|5.718919] "rad" NUC
+ SG_ CableFaultBits : 48|8@1+ (1,0) [0|255] "" NUC
+ SG_ EchoProfileSequence : 56|8@1+ (1,0) [0|255] "" NUC
+
+BO_ 529 FB_CABLE_AUX_STATUS: 8 STM32
+ SG_ CableExecutionState : 0|8@1+ (1,0) [0|255] "" NUC
+ SG_ InterlockBits : 8|8@1+ (1,0) [0|255] "" NUC
+ SG_ CumulativePayoutLength : 16|32@1+ (0.001,0) [0|4294967.295] "m" NUC
+ SG_ CableProfileSlot : 48|8@1+ (1,0) [0|255] "" NUC
+ SG_ EchoAuxiliarySequence : 56|8@1+ (1,0) [0|255] "" NUC
+
+BO_ 544 FB_ACTUATOR_DIAG: 8 STM32
+ SG_ UpperPayoutMotorCurrent : 0|16@1+ (0.1,0) [0|6553.5] "A" NUC
+ SG_ LowerPayoutMotorCurrent : 16|16@1+ (0.1,0) [0|6553.5] "A" NUC
+ SG_ LimitBits : 32|8@1+ (1,0) [0|255] "" NUC
+ SG_ SynchronizationError : 40|8@1+ (1,0) [0|1] "" NUC
+ SG_ DriverTemperature : 48|16@1- (0.1,0) [-3276.8|3276.7] "degC" NUC
+
+BO_ 768 CFG_PROFILE_PREPARE: 8 NUC
+ SG_ TransactionSequence : 0|8@1+ (1,0) [0|255] "" STM32
+ SG_ ProfileKind : 8|8@1+ (1,0) [0|255] "" STM32
+ SG_ ProfileSlot : 16|16@1+ (1,0) [0|65535] "" STM32
+ SG_ ProfileVersionLow : 32|16@1+ (1,0) [0|65535] "" STM32
+ SG_ Crc16 : 48|16@1+ (1,0) [0|65535] "" STM32
+
+BO_ 769 CFG_PROFILE_HASH_CHUNK: 8 NUC
+ SG_ TransactionSequence : 0|8@1+ (1,0) [0|255] "" STM32
+ SG_ HashChunkIndex : 8|8@1+ (1,0) [0|7] "" STM32
+ SG_ HashChunkData : 16|32@1+ (1,0) [0|4294967295] "" STM32
+ SG_ Crc16 : 48|16@1+ (1,0) [0|65535] "" STM32
+
+BO_ 770 CFG_PROFILE_ACTIVATE: 8 NUC
+ SG_ TransactionSequence : 0|8@1+ (1,0) [0|255] "" STM32
+ SG_ ProfileAction : 8|8@1+ (1,0) [0|2] "" STM32
+ SG_ NewSessionId : 16|32@1+ (1,0) [1|4294967295] "" STM32
+ SG_ Crc16 : 48|16@1+ (1,0) [0|65535] "" STM32
+
+BO_ 771 FB_PROFILE_STATUS: 8 STM32
+ SG_ TransactionSequence : 0|8@1+ (1,0) [0|255] "" NUC
+ SG_ ProfileTransactionState : 8|8@1+ (1,0) [0|5] "" NUC
+ SG_ ProfileSlot : 16|16@1+ (1,0) [0|65535] "" NUC
+ SG_ ProfileHashTag : 32|16@1+ (1,0) [0|65535] "" NUC
+ SG_ Crc16 : 48|16@1+ (1,0) [0|65535] "" NUC
+
+CM_ "All multi-byte values are little-endian. Protected frames use CRC-16/CCITT-FALSE as specified by main_robot_can_v1.md.";
+CM_ BO_ 256 "Only the latest command is retained. It is valid only in the active SessionId and when paired with CMD_CABLE_CTRL by ProfileSequence.";
+CM_ BO_ 272 "Tension and payout targets are sampled from the same immutable ExecutionProfile as CMD_TRACK_CTRL.";
+CM_ BO_ 768 "Profile activation proves configuration consistency only; it never grants execution authority.";
+
+VAL_ 770 ProfileAction 0 "ABORT" 1 "ACTIVATE" 2 "DEACTIVATE" ;
+VAL_ 771 ProfileTransactionState 0 "UNSPECIFIED" 1 "PREPARING" 2 "PREPARED" 3 "ACTIVE" 4 "REJECTED" 5 "FAULT" ;
+

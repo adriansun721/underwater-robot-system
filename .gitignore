@@ -1,0 +1,29 @@
+# Build and generated output
+**/build/
+**/build-*/
+**/out/
+**/install/
+**/log/
+**/CMakeFiles/
+**/CMakeCache.txt
+**/*.cmake.user
+**/Testing/
+
+# IDE and local tooling
+.vs/
+.vscode/
+.idea/
+**/.scratch/
+
+# Language/tool caches
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Temporary total-repository staging backups
+.git-total-backup/

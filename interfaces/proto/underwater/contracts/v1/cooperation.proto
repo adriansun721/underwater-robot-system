@@ -1,0 +1,291 @@
+syntax = "proto3";
+
+package underwater.contracts.v1;
+
+import "underwater/contracts/v1/common.proto";
+import "underwater/contracts/v1/sensing.proto";
+import "underwater/contracts/v1/state.proto";
+
+message Region3dEnu {
+  // Exactly [min_x, min_y, min_z, max_x, max_y, max_z]. All values are
+  // finite; min values MUST be strictly less than max values.
+  repeated double xyz_m = 1;
+  string frame_id = 2;
+}
+
+enum SurveyUrgency {
+  SURVEY_URGENCY_UNSPECIFIED = 0;
+  SURVEY_URGENCY_NORMAL = 1;
+  SURVEY_URGENCY_BLOCKING = 2;
+  SURVEY_URGENCY_SAFETY_CRITICAL = 3;
+}
+
+message ScoutMission {
+  MessageHeader header = 1;
+  uint64 mission_id = 2;
+  Region3dEnu required_region = 3;
+  Region3dEnu allowed_scout_region = 4;
+  optional double required_coverage_ratio = 5;
+  optional double required_resolution_m = 6;
+  uint64 maximum_evidence_age_ns = 7;
+  // Sender-domain business deadline. A Scout receiver MUST NOT compare it
+  // with its local monotonic clock; local admission timing is returned in
+  // ScoutMissionDecision.
+  optional int64 business_deadline_monotonic_ns = 8;
+  SurveyUrgency urgency = 9;
+  optional double minimum_separation_m = 10;
+  optional double maximum_communication_distance_m = 11;
+  uint64 coordination_version = 12;
+  // mission_id, mission_version, and mission_content_identity together form
+  // the sole public identity of the survey request.
+  uint64 mission_version = 13;
+  ContentIdentity mission_content_identity = 14;
+}
+
+// Conservative occupied volume swept linearly between both centers. The
+// occupied radius MUST include the physical and position-uncertainty radii.
+message ConservativeSweptSphere3dEnu {
+  Point3dEnu start_center = 1;
+  Point3dEnu end_center = 2;
+  optional double physical_radius_m = 3;
+  optional double position_uncertainty_radius_m = 4;
+  optional double conservative_occupied_radius_m = 5;
+}
+
+// Closed interval relative to MainRobotPrediction.alignment_epoch. Adjacent
+// intervals MUST be contiguous and spatially continuous.
+message MainRobotOccupiedInterval {
+  uint64 start_offset_ns = 1;
+  uint64 end_offset_ns = 2;
+  ConservativeSweptSphere3dEnu swept_volume = 3;
+}
+
+// Planning input only. It does not authorize either robot to move.
+message MainRobotPrediction {
+  MessageHeader header = 1;
+  uint64 mission_id = 2;
+  uint64 mission_version = 3;
+  ContentIdentity mission_content_identity = 4;
+  string prediction_id = 5;
+  string main_robot_id = 6;
+  uint64 prediction_version = 7;
+  // Cross-device synchronized time is used only to align prediction offsets.
+  // It MUST NOT drive a local lease, deadline, or watchdog.
+  SynchronizedObservationTime alignment_epoch = 8;
+  // Both validity bounds belong to header.source_clock_domain_id. A Scout
+  // receiver instead applies its local receive-age gate.
+  optional int64 source_valid_from_monotonic_ns = 9;
+  optional int64 source_valid_until_monotonic_ns = 10;
+  repeated MainRobotOccupiedInterval occupied_intervals = 11;
+  ContentIdentity prediction_content_identity = 12;
+}
+
+enum LinkAssuranceBasis {
+  LINK_ASSURANCE_BASIS_UNSPECIFIED = 0;
+  // Only the maximum geometric distance is asserted. Link quality is not.
+  LINK_ASSURANCE_GEOMETRIC_DISTANCE_ONLY = 1;
+  LINK_ASSURANCE_CALIBRATED_LINK_MODEL = 2;
+}
+
+// Planning input only. It does not authorize either robot to move.
+message ScoutCoordinationConstraint {
+  MessageHeader header = 1;
+  uint64 mission_id = 2;
+  uint64 mission_version = 3;
+  ContentIdentity mission_content_identity = 4;
+  uint64 coordination_version = 5;
+  string prediction_id = 6;
+  uint64 prediction_version = 7;
+  ContentIdentity prediction_content_identity = 8;
+  ChannelId channel_id = 9;
+  optional double minimum_separation_m = 10;
+  optional double maximum_communication_distance_m = 11;
+  LinkAssuranceBasis link_assurance_basis = 12;
+  // Present only when link_assurance_basis selects a calibrated model.
+  ProfileRef calibrated_link_model = 13;
+  ProfileRef scout_loss_policy = 14;
+  ProfileRef main_loss_policy = 15;
+  // Sender-domain bounds; a Scout receiver applies its local receive-age gate.
+  optional int64 source_valid_from_monotonic_ns = 16;
+  optional int64 source_valid_until_monotonic_ns = 17;
+  ContentIdentity coordination_content_identity = 18;
+}
+
+enum ScoutMissionDecisionDisposition {
+  SCOUT_MISSION_DECISION_DISPOSITION_UNSPECIFIED = 0;
+  SCOUT_MISSION_DECISION_ACCEPTED = 1;
+  SCOUT_MISSION_DECISION_REJECTED = 2;
+}
+
+message ScoutMissionDecision {
+  MessageHeader header = 1;
+  uint64 mission_id = 2;
+  uint64 mission_version = 3;
+  ContentIdentity mission_content_identity = 4;
+  ScoutMissionDecisionDisposition disposition = 5;
+  CodeRef outcome = 6;
+  // Both times belong to header.source_clock_domain_id on the Scout NUC.
+  optional int64 received_at_monotonic_ns = 7;
+  optional int64 admission_valid_until_monotonic_ns = 8;
+  uint64 accepted_coordination_version = 9;
+  ContentIdentity decision_content_identity = 10;
+}
+
+message ScoutMissionCancellation {
+  MessageHeader header = 1;
+  uint64 mission_id = 2;
+  uint64 mission_version = 3;
+  ContentIdentity mission_content_identity = 4;
+  uint64 cancellation_version = 5;
+  CodeRef reason = 6;
+  ContentIdentity cancellation_content_identity = 7;
+}
+
+enum ScoutMissionCancellationDisposition {
+  SCOUT_MISSION_CANCELLATION_DISPOSITION_UNSPECIFIED = 0;
+  SCOUT_MISSION_CANCELLATION_APPLIED = 1;
+  SCOUT_MISSION_CANCELLATION_IDEMPOTENT_DUPLICATE = 2;
+  SCOUT_MISSION_CANCELLATION_REJECTED = 3;
+}
+
+message ScoutMissionCancellationAck {
+  MessageHeader header = 1;
+  uint64 mission_id = 2;
+  uint64 mission_version = 3;
+  ContentIdentity mission_content_identity = 4;
+  uint64 cancellation_version = 5;
+  ContentIdentity cancellation_content_identity = 6;
+  ScoutMissionCancellationDisposition disposition = 7;
+  CodeRef outcome = 8;
+  ContentIdentity ack_content_identity = 9;
+}
+
+// Planning-time prediction only. It cannot prove that an observation occurred
+// or that the immutable map advanced.
+message SurveyPlanEvidence {
+  uint64 mission_id = 1;
+  uint64 mission_version = 2;
+  ContentIdentity mission_content_identity = 3;
+  string baseline_map_id = 4;
+  uint64 baseline_map_version = 5;
+  optional double conservative_predicted_coverage_ratio = 6;
+  optional double predicted_resolution_m = 7;
+  Region3dEnu predicted_covered_region = 8;
+  ContentIdentity evidence_content_identity = 9;
+  ContentIdentity baseline_map_content_identity = 10;
+}
+
+// Execution-time evidence. Completion is valid only when observation_ids is
+// non-empty and resulting_map_version is newer than baseline_map_version.
+message SurveyCompletionEvidence {
+  MessageHeader header = 1;
+  uint64 mission_id = 2;
+  uint64 mission_version = 3;
+  ContentIdentity mission_content_identity = 4;
+  string baseline_map_id = 5;
+  uint64 baseline_map_version = 6;
+  string resulting_map_id = 7;
+  uint64 resulting_map_version = 8;
+  ContentIdentity resulting_map_content_identity = 9;
+  repeated bytes observation_ids = 10;
+  Region3dEnu observed_covered_region = 11;
+  optional double achieved_coverage_ratio = 12;
+  optional double achieved_resolution_m = 13;
+  SynchronizedObservationTime oldest_contributing_observation_time = 14;
+  ContentIdentity completion_content_identity = 15;
+  ContentIdentity baseline_map_content_identity = 16;
+}
+
+enum SurveyCompletionDisposition {
+  SURVEY_COMPLETION_DISPOSITION_UNSPECIFIED = 0;
+  SURVEY_COMPLETION_ACCEPTED = 1;
+  SURVEY_COMPLETION_IDEMPOTENT_DUPLICATE = 2;
+  SURVEY_COMPLETION_REJECTED = 3;
+}
+
+message SurveyCompletionAck {
+  MessageHeader header = 1;
+  uint64 mission_id = 2;
+  uint64 mission_version = 3;
+  ContentIdentity mission_content_identity = 4;
+  ContentIdentity completion_content_identity = 5;
+  SurveyCompletionDisposition disposition = 6;
+  CodeRef outcome = 7;
+  ContentIdentity ack_content_identity = 8;
+}
+
+message ScoutStatus {
+  MessageHeader header = 1;
+  uint64 mission_id = 2;
+  ScoutMissionState state = 3;
+  Pose2dEnu horizontal_pose = 4;
+  optional double z_m = 5;
+  optional double coverage_ratio = 6;
+  uint64 navigation_version = 7;
+  uint64 sensor_health_version = 8;
+  repeated uint32 active_fault_codes = 9;
+  uint64 mission_version = 10;
+  ContentIdentity mission_content_identity = 11;
+}
+
+message CoopHeartbeat {
+  MessageHeader header = 1;
+  string robot_id = 2;
+  uint32 mission_state = 3;
+  repeated uint32 active_fault_codes = 4;
+  uint32 estimated_round_trip_time_ms = 5;
+  uint32 estimated_packet_loss_per_mille = 6;
+}
+
+enum MapPayloadEncoding {
+  MAP_PAYLOAD_ENCODING_UNSPECIFIED = 0;
+  // Deterministic protobuf serialization of HybridMapSnapshot.
+  MAP_PAYLOAD_DETERMINISTIC_PROTOBUF_V1 = 1;
+}
+
+enum MapCompression {
+  MAP_COMPRESSION_UNSPECIFIED = 0;
+  MAP_COMPRESSION_NONE = 1;
+  MAP_COMPRESSION_ZSTD_V1 = 2;
+}
+
+message MapChunk {
+  MessageHeader header = 1;
+  string map_id = 2;
+  uint64 map_version = 3;
+  string frame_id = 4;
+  uint32 chunk_index = 5;
+  uint32 chunk_count = 6;
+  bytes compressed_payload = 7;
+  ContentIdentity uncompressed_map_identity = 8;
+  uint32 uncompressed_crc32 = 9;
+  MapPayloadEncoding payload_encoding = 10;
+  MapCompression compression = 11;
+  uint64 compressed_total_bytes = 12;
+  uint64 uncompressed_total_bytes = 13;
+  uint64 compressed_offset_bytes = 14;
+  uint32 compressed_chunk_crc32 = 15;
+  ContentIdentity compressed_chunk_identity = 16;
+}
+
+enum MapAckDisposition {
+  MAP_ACK_DISPOSITION_UNSPECIFIED = 0;
+  MAP_ACK_ACCEPTED = 1;
+  MAP_ACK_MISSING_CHUNKS = 2;
+  MAP_ACK_REJECTED = 3;
+}
+
+message MapAck {
+  MessageHeader header = 1;
+  string map_id = 2;
+  uint64 map_version = 3;
+  MapAckDisposition disposition = 4;
+  repeated uint32 missing_chunk_indexes = 5;
+  // Deprecated compatibility scalar. New publishers use outcome.
+  optional uint32 outcome_code = 6 [deprecated = true];
+  ContentIdentity uncompressed_map_identity = 7;
+  uint32 expected_chunk_count = 8;
+  uint64 acknowledgement_version = 9;
+  CodeRef outcome = 10;
+  ContentIdentity ack_content_identity = 11;
+}

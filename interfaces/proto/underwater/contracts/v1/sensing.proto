@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+package underwater.contracts.v1;
+
+import "underwater/contracts/v1/common.proto";
+
+enum ScoutSensorType {
+  SCOUT_SENSOR_TYPE_UNSPECIFIED = 0;
+  SCOUT_SENSOR_MULTIBEAM_SONAR = 1;
+  SCOUT_SENSOR_FORWARD_LOOKING_SONAR = 2;
+  SCOUT_SENSOR_CAMERA = 3;
+}
+
+enum SensorOcclusionPolicy {
+  SENSOR_OCCLUSION_POLICY_UNSPECIFIED = 0;
+  // A coverage ray is usable only while every traversed map cell is known
+  // free; UNKNOWN, CONFLICTED, or occupied cells terminate visibility.
+  SENSOR_OCCLUSION_KNOWN_FREE_RAYCAST_REQUIRED = 1;
+}
+
+enum ScoutSensorHealth {
+  SCOUT_SENSOR_HEALTH_UNSPECIFIED = 0;
+  SCOUT_SENSOR_HEALTH_NOMINAL = 1;
+  SCOUT_SENSOR_HEALTH_DEGRADED = 2;
+  SCOUT_SENSOR_HEALTH_UNCALIBRATED = 3;
+  SCOUT_SENSOR_HEALTH_FAILED = 4;
+}
+
+enum CurrentEstimateValidity {
+  CURRENT_ESTIMATE_VALIDITY_UNSPECIFIED = 0;
+  CURRENT_ESTIMATE_VALID = 1;
+  CURRENT_ESTIMATE_DEGRADED = 2;
+  CURRENT_ESTIMATE_INVALID = 3;
+}
+
+message SensorExtrinsicsFlu {
+  // Fixed translation from base_link origin to the sensor-frame origin,
+  // expressed in base_link/FLU.
+  optional double translation_x_m = 1;
+  optional double translation_y_m = 2;
+  optional double translation_z_m = 3;
+  // Unit quaternion rotating sensor-frame vectors into base_link/FLU.
+  optional double q_x = 4;
+  optional double q_y = 5;
+  optional double q_z = 6;
+  optional double q_w = 7;
+  string body_frame_id = 8;
+  string sensor_frame_id = 9;
+}
+
+message SensorFieldOfView {
+  // Full angular extents centred on the sensor-frame +X boresight.
+  optional double horizontal_fov_rad = 1;
+  optional double vertical_fov_rad = 2;
+  optional double minimum_range_m = 3;
+  optional double maximum_range_m = 4;
+  optional double range_resolution_m = 5;
+  optional double horizontal_angular_resolution_rad = 6;
+  optional double vertical_angular_resolution_rad = 7;
+}
+
+// Immutable calibrated observation geometry. Its business version is
+// deliberately independent of ScoutSensorHealthState.health_version.
+message ScoutSensorGeometry {
+  MessageHeader header = 1;
+  string sensor_id = 2;
+  uint64 geometry_version = 3;
+  ScoutSensorType sensor_type = 4;
+  SensorExtrinsicsFlu extrinsics = 5;
+  SensorFieldOfView field_of_view = 6;
+  SensorOcclusionPolicy occlusion_policy = 7;
+  string operating_domain_id = 8;
+  string device_serial_number = 9;
+  string calibration_dataset_id = 10;
+  string calibration_method_version = 11;
+  // Calibration provenance only; never a local safety deadline.
+  optional int64 calibrated_at_utc_ns = 12;
+  optional bool production_approved = 13;
+  ContentIdentity geometry_content_identity = 14;
+}
+
+// Latest-value device health. Only NOMINAL is accepted for new planning in
+// v1; a degraded device requires a newly approved geometry profile.
+message ScoutSensorHealthState {
+  MessageHeader header = 1;
+  string sensor_id = 2;
+  uint64 health_version = 3;
+  // Both ticks belong to header.source_clock_domain_id.
+  optional int64 observed_at_monotonic_ns = 4;
+  optional int64 valid_until_monotonic_ns = 5;
+  ScoutSensorHealth health = 6;
+  // Stable Manifest-bound FaultCode numeric identities, unique and strictly
+  // ascending. New planning accepts NOMINAL health only with this set empty.
+  repeated uint32 active_fault_codes = 7;
+  ContentIdentity health_content_identity = 8;
+}
+
+message CurrentRegion3dEnu {
+  // [min_x, min_y, min_z, max_x, max_y, max_z], finite and strictly ordered.
+  repeated double xyz_m = 1;
+  string frame_id = 2;
+}
+
+message Point3dEnu {
+  optional double x_m = 1;
+  optional double y_m = 2;
+  optional double z_m = 3;
+  string frame_id = 4;
+}
+
+message Vector3dEnuMps {
+  optional double x_mps = 1;
+  optional double y_mps = 2;
+  optional double z_mps = 3;
+  string frame_id = 4;
+}
+
+message CurrentGradient3d {
+  // dc_i/dp_j, exactly nine finite row-major values with units 1/s.
+  repeated double row_major_per_s = 1;
+  string input_frame_id = 2;
+  string output_frame_id = 3;
+}
+
+// A bounded local affine current model. Without spatial_gradient the velocity
+// is uniform over applicable_region, but the complete error bound remains
+// mandatory.
+message ScoutCurrentEstimate {
+  MessageHeader header = 1;
+  string current_model_id = 2;
+  uint64 current_model_version = 3;
+  // All ticks belong to header.source_clock_domain_id.
+  optional int64 observed_at_monotonic_ns = 4;
+  optional int64 valid_from_monotonic_ns = 5;
+  optional int64 valid_until_monotonic_ns = 6;
+  CurrentRegion3dEnu applicable_region = 7;
+  Point3dEnu reference_position = 8;
+  Vector3dEnuMps velocity_at_reference_mps = 9;
+  // Non-negative per-axis absolute bounds in mission_enu.
+  Vector3dEnuMps component_error_bound_mps = 10;
+  // Euclidean speed-error bound; at least the norm of component bounds.
+  optional double speed_error_bound_mps = 11;
+  optional CurrentGradient3d spatial_gradient = 12;
+  string operating_domain_id = 13;
+  string model_source_id = 14;
+  CurrentEstimateValidity validity = 15;
+  ContentIdentity current_content_identity = 16;
+}

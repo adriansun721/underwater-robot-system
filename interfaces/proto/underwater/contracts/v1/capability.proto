@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package underwater.contracts.v1;
+
+import "underwater/contracts/v1/common.proto";
+
+enum ScoutThrusterHealthProfile {
+  SCOUT_THRUSTER_HEALTH_PROFILE_UNSPECIFIED = 0;
+  SCOUT_THRUSTER_HEALTH_NOMINAL = 1;
+  SCOUT_THRUSTER_HEALTH_DEGRADED_A = 2;
+  SCOUT_THRUSTER_HEALTH_DEGRADED_B = 3;
+}
+
+enum ScoutThrusterUnitHealth {
+  SCOUT_THRUSTER_UNIT_HEALTH_UNSPECIFIED = 0;
+  SCOUT_THRUSTER_UNIT_HEALTH_NOMINAL = 1;
+  SCOUT_THRUSTER_UNIT_HEALTH_DEGRADED = 2;
+  SCOUT_THRUSTER_UNIT_HEALTH_FAILED = 3;
+}
+
+enum ScoutEnergyContingencyRequirement {
+  SCOUT_ENERGY_CONTINGENCY_UNSPECIFIED = 0;
+  SCOUT_ENERGY_RETURN_REQUIRED = 1;
+  SCOUT_ENERGY_RISK_ACTION_REQUIRED = 2;
+}
+
+message MotionCapabilityEnvelope {
+  optional double maximum_water_relative_speed_mps = 1;
+  optional double maximum_translational_acceleration_mps2 = 2;
+  optional double maximum_vertical_ascent_speed_mps = 3;
+  optional double maximum_vertical_descent_speed_mps = 4;
+  optional double maximum_yaw_rate_radps = 5;
+  optional double maximum_yaw_acceleration_radps2 = 6;
+  optional double maximum_absolute_roll_rad = 7;
+  optional double maximum_absolute_pitch_rad = 8;
+  optional double minimum_translational_thrust_margin_fraction = 9;
+  optional double minimum_rotational_thrust_margin_fraction = 10;
+  string thruster_allocator_version = 11;
+  optional double maximum_vertical_acceleration_mps2 = 12;
+}
+
+message BrakingCapabilityEnvelope {
+  // Active, calibrated braking authority; zero thrust is never braking proof.
+  optional double command_latency_s = 1;
+  optional double minimum_translational_deceleration_mps2 = 2;
+  optional double minimum_yaw_deceleration_radps2 = 3;
+  optional double stopping_distance_margin_m = 4;
+  optional bool requires_active_thrust = 5;
+}
+
+message CapabilityOperatingEnvelope {
+  optional double minimum_depth_m = 1;
+  optional double maximum_depth_m = 2;
+  optional double maximum_current_speed_mps = 3;
+  optional double minimum_bus_voltage_v = 4;
+  optional double maximum_bus_voltage_v = 5;
+  optional double minimum_water_density_kgpm3 = 6;
+  optional double maximum_water_density_kgpm3 = 7;
+}
+
+message ScoutCapabilityProfile {
+  MessageHeader header = 1;
+  string capability_profile_id = 2;
+  uint64 capability_profile_version = 3;
+  ScoutThrusterHealthProfile health_profile = 4;
+  MotionCapabilityEnvelope motion_envelope = 5;
+  BrakingCapabilityEnvelope braking_envelope = 6;
+  CapabilityOperatingEnvelope operating_envelope = 7;
+  string operating_domain_id = 8;
+  string vehicle_id = 9;
+  string device_serial_number = 10;
+  string calibration_dataset_id = 11;
+  string calibration_method_version = 12;
+  optional int64 calibrated_at_utc_ns = 13;
+  optional bool production_approved = 14;
+  ContentIdentity capability_content_identity = 15;
+  // Exact calibrated installed health combination, unique and ascending by ID.
+  repeated ScoutThrusterUnitState calibrated_thruster_states = 16;
+  string thruster_configuration_id = 17;
+}
+
+message ScoutThrusterUnitState {
+  string thruster_id = 1;
+  ScoutThrusterUnitHealth health = 2;
+}
+
+message ScoutThrusterHealthState {
+  MessageHeader header = 1;
+  string vehicle_id = 2;
+  uint64 health_version = 3;
+  optional int64 observed_at_monotonic_ns = 4;
+  optional int64 valid_until_monotonic_ns = 5;
+  ScoutThrusterHealthProfile health_profile = 6;
+  repeated ScoutThrusterUnitState thrusters = 7;
+  ProfileRef active_capability_profile = 8;
+  repeated uint32 active_fault_codes = 9;
+  ContentIdentity health_content_identity = 10;
+}
+
+message PowerModelCoefficients {
+  // Conservative upper-bound model in the model profile's operating domain.
+  optional double hotel_power_w = 1;
+  optional double speed_linear_w_per_mps = 2;
+  optional double speed_cubic_w_per_mps3 = 3;
+  optional double acceleration_w_per_mps2 = 4;
+  optional double yaw_rate_w_per_radps = 5;
+  optional double model_error_upper_bound_w = 6;
+}
+
+message ScoutEnergyModelProfile {
+  MessageHeader header = 1;
+  string energy_model_id = 2;
+  uint64 energy_model_version = 3;
+  ScoutThrusterHealthProfile health_profile = 4;
+  ProfileRef capability_profile = 5;
+  PowerModelCoefficients power_model = 6;
+  string operating_domain_id = 7;
+  string vehicle_id = 8;
+  string device_serial_number = 9;
+  string calibration_dataset_id = 10;
+  string calibration_method_version = 11;
+  optional int64 calibrated_at_utc_ns = 12;
+  optional bool production_approved = 13;
+  ContentIdentity energy_model_content_identity = 14;
+}
+
+message ScoutEnergyState {
+  MessageHeader header = 1;
+  string vehicle_id = 2;
+  string energy_store_id = 3;
+  uint64 energy_state_version = 4;
+  optional int64 observed_at_monotonic_ns = 5;
+  optional int64 valid_until_monotonic_ns = 6;
+  ProfileRef energy_model = 7;
+  optional double available_energy_j = 8;
+  optional double reserve_energy_j = 9;
+  optional double required_return_energy_j = 10;
+  optional double required_risk_action_energy_j = 11;
+  ScoutEnergyContingencyRequirement contingency_requirement = 12;
+  string operating_domain_id = 13;
+  ContentIdentity energy_state_content_identity = 14;
+}

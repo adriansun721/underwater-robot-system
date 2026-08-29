@@ -1,0 +1,7 @@
+/build/
+/Testing/
+*.user
+*.suo
+*.VC.db
+*.VC.VC.opendb
+compile_commands.json

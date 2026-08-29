@@ -1,0 +1,22 @@
+if(NOT DEFINED REPORT_PATH OR NOT EXISTS "${REPORT_PATH}")
+  message(FATAL_ERROR "closed-loop report does not exist: ${REPORT_PATH}")
+endif()
+
+file(READ "${REPORT_PATH}" report_json)
+string(JSON schema ERROR_VARIABLE schema_error
+       GET "${report_json}" schema_version)
+if(NOT schema_error STREQUAL "NOTFOUND")
+  message(FATAL_ERROR "closed-loop report is invalid JSON: ${schema_error}")
+endif()
+if(NOT schema STREQUAL "closed-loop-regression/v1")
+  message(FATAL_ERROR "unexpected closed-loop schema: ${schema}")
+endif()
+
+string(JSON scenario_count LENGTH "${report_json}" scenarios)
+string(JSON injection_count LENGTH "${report_json}" injection_runs)
+string(JSON report_passed GET "${report_json}" passed)
+if(NOT scenario_count EQUAL 8 OR NOT injection_count EQUAL 4 OR
+   NOT report_passed)
+  message(FATAL_ERROR
+          "closed-loop report is incomplete: scenarios=${scenario_count} injections=${injection_count} passed=${report_passed}")
+endif()

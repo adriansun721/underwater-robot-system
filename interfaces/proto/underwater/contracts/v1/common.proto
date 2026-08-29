@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package underwater.contracts.v1;
+
+// Minor evolution may add only genuinely ignorable non-safety fields.
+enum StreamId {
+  STREAM_ID_UNSPECIFIED = 0;
+  STREAM_PLANNING_RESULT = 1;
+  STREAM_AUTHORIZED_EXECUTION_BUNDLE = 2;
+  STREAM_BUNDLE_ACK = 3;
+  STREAM_EXECUTION_REVOCATION = 4;
+  STREAM_AUTHORITY_EVENT = 5;
+  STREAM_EXECUTION_FEEDBACK = 6;
+  STREAM_EXECUTION_STATUS = 7;
+  STREAM_STATE_TRANSITION = 8;
+  STREAM_FAULT_REPORT = 9;
+  STREAM_DIAGNOSTIC_EVENT = 10;
+  STREAM_SAFETY_AUDIT_EVENT = 11;
+  STREAM_EMERGENCY_STOP = 12;
+  STREAM_PROFILE_TRANSACTION = 13;
+  STREAM_COOP_HEARTBEAT = 14;
+  STREAM_SCOUT_MISSION = 15;
+  STREAM_SCOUT_STATUS = 16;
+  STREAM_MAP_CHUNK = 17;
+  STREAM_MAP_ACK = 18;
+  STREAM_SCOUT_MISSION_DECISION = 19;
+  STREAM_SCOUT_MISSION_CANCELLATION = 20;
+  STREAM_SCOUT_MISSION_CANCELLATION_ACK = 21;
+  STREAM_SURVEY_COMPLETION_EVIDENCE = 22;
+  STREAM_SURVEY_COMPLETION_ACK = 23;
+  STREAM_SCOUT_NAVIGATION_STATE = 24;
+  STREAM_SCOUT_SENSOR_GEOMETRY = 25;
+  STREAM_SCOUT_SENSOR_HEALTH = 26;
+  STREAM_SCOUT_CURRENT_ESTIMATE = 27;
+  STREAM_SCOUT_CAPABILITY_PROFILE = 28;
+  STREAM_SCOUT_THRUSTER_HEALTH = 29;
+  STREAM_SCOUT_ENERGY_MODEL = 30;
+  STREAM_SCOUT_ENERGY_STATE = 31;
+  STREAM_MAIN_ROBOT_PREDICTION = 32;
+  STREAM_SCOUT_COORDINATION_CONSTRAINT = 33;
+  STREAM_SCOUT_PLANNING_RESULT = 34;
+  STREAM_SCOUT_AUTHORIZED_EXECUTION_BUNDLE = 35;
+  STREAM_SCOUT_BUNDLE_ACK = 36;
+  STREAM_SCOUT_EXECUTION_FEEDBACK = 37;
+  STREAM_SCOUT_EXECUTION_REVOCATION = 38;
+  STREAM_SCOUT_EXECUTION_REVOCATION_ACK = 39;
+}
+
+enum TimeSyncStatus {
+  TIME_SYNC_STATUS_UNSPECIFIED = 0;
+  TIME_SYNC_UNSYNCHRONIZED = 1;
+  TIME_SYNC_SYNCHRONIZED = 2;
+  TIME_SYNC_DEGRADED = 3;
+}
+
+message SynchronizedObservationTime {
+  optional int64 utc_time_ns = 1;
+  TimeSyncStatus status = 2;
+  optional uint64 uncertainty_ns = 3;
+}
+
+message ContentIdentity {
+  // Exactly 32 bytes. It is an identity/integrity value, not authentication.
+  bytes sha256 = 1;
+}
+
+message ProfileRef {
+  string profile_id = 1;
+  uint64 version = 2;
+  ContentIdentity content_identity = 3;
+}
+
+message ContractManifestRef {
+  uint32 schema_major = 1;
+  uint32 schema_minor = 2;
+  ContentIdentity manifest_identity = 3;
+}
+
+message MessageHeader {
+  uint32 schema_major = 1;
+  uint32 schema_minor = 2;
+  string producer_id = 3;
+  // UUID bytes; a restart creates a new value.
+  bytes producer_session_id = 4;
+  StreamId stream_id = 5;
+  // Strictly increasing within producer/session/stream.
+  uint64 sequence = 6;
+  string source_clock_domain_id = 7;
+  optional int64 generated_at_monotonic_ns = 8;
+  optional SynchronizedObservationTime observed_at = 9;
+  bytes event_id = 10;
+  bytes correlation_id = 11;
+  optional bytes caused_by_event_id = 12;
+  // Required for every top-level message except bootstrap ContractManifest.
+  ContractManifestRef manifest = 13;
+}
+
+message Vector2M {
+  optional double x_m = 1;
+  optional double y_m = 2;
+}
+
+message Pose2dEnu {
+  // frame_id MUST be mission_enu for public world/map poses.
+  optional double x_m = 1;
+  optional double y_m = 2;
+  // ENU yaw about +Z, counter-clockwise positive, normalized to [-pi, pi).
+  optional double yaw_rad = 3;
+  string frame_id = 4;
+  optional int64 observed_at_monotonic_ns = 5;
+}
+
+// Canonical robot-body vectors use base_link (FLU: forward, left, up).
+
+message CodeRef {
+  uint32 numeric_code = 1;
+  string registry_id = 2;
+  uint64 registry_version = 3;
+}

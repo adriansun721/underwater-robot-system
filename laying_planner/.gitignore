@@ -1,0 +1,45 @@
+# ROS 2 / colcon构建产物
+build/
+build-*/
+install/
+log/
+
+# CMake构建产物
+build_standalone/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# 编译产物
+*.o
+*.so
+*.a
+*.exe
+*.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# 测试
+/Testing/
+CTestTestfile.cmake
+
+# 其他
+*.log
+*.bag
+*.db3
